@@ -1,0 +1,55 @@
+
+.modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 0;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+}
+
+.modal--active {
+  display: block;
+}
+
+.modal__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+}
+
+.modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal__content {
+  position: relative;
+  margin: 100px auto;
+  width: 300px;
+  background: var(--color-surface);
+  padding: 20px;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.modal__content--order-details {
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(560px, calc(100vh - 48px));
+  margin: 48px auto;
+  overflow-y: auto;
+}
+
+.modal__input {
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: white;
+}

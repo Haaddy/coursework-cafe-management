@@ -1,0 +1,17 @@
+{orders: [
+    {id:'zmqFNHfkbZA',
+    customerName: {customerName:'da'
+      },
+      totalPrice: 15,
+      status:'pending',
+      items: [
+          {id: 1,
+          name:'Капучино',
+          price: 15,
+          volume:'500'
+        }
+      ],
+      createdAt:'2026-04-17T13: 25: 54.892Z'
+    }
+  ],$schema:'./node_modules/json-server/schema.json'
+}
