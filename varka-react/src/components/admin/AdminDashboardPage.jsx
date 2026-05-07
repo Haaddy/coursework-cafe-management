@@ -26,6 +26,14 @@ const dashboardCards = [
     to: "/admin/inventory",
     buttonLabel: "Открыть склад",
   },
+  {
+    id: "recipes",
+    title: "Рецепты списания",
+    description:
+      "Настройте связь товаров меню с ингредиентами склада для автосписания при заказе.",
+    to: "/admin/recipes",
+    buttonLabel: "Открыть рецепты",
+  },
 ];
 
 function AdminDashboardPage() {

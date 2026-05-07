@@ -101,6 +101,20 @@ async function createTables() {
       FOREIGN KEY(item_id) REFERENCES inventory_items(id) ON DELETE CASCADE
     )
   `);
+
+  await run(`
+    CREATE TABLE IF NOT EXISTS menu_ingredients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      menu_id INTEGER NOT NULL,
+      inventory_item_id INTEGER NOT NULL,
+      qty_per_unit REAL NOT NULL CHECK (qty_per_unit > 0),
+      volume TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(menu_id, inventory_item_id, volume),
+      FOREIGN KEY(menu_id) REFERENCES menu(id) ON DELETE CASCADE,
+      FOREIGN KEY(inventory_item_id) REFERENCES inventory_items(id) ON DELETE CASCADE
+    )
+  `);
 }
 
 async function seedMenuIfNeeded() {

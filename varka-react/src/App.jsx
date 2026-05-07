@@ -5,6 +5,7 @@ import HomePage from "./components/HomePage"
 import AdminMenuPage from "./components/admin/AdminMenuPage";
 import AdminStatsPage from "./components/admin/AdminStatsPage";
 import AdminInventoryPage from "./components/admin/AdminInventoryPage";
+import AdminRecipesPage from "./components/admin/AdminRecipesPage";
 
 
 
@@ -27,6 +28,7 @@ function App() {
       <Route path="/admin/menu" element={<AdminMenuPage/>}></Route>
       <Route path="/admin/stats" element={<AdminStatsPage/>}></Route>
       <Route path="/admin/inventory" element={<AdminInventoryPage/>}></Route>
+      <Route path="/admin/recipes" element={<AdminRecipesPage/>}></Route>
     </Routes>
     
 

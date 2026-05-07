@@ -155,6 +155,19 @@
   padding: 18px;
 }
 
+.admin-recipes-page__controls {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+.admin-recipes-page__table-wrap {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
 .admin-inventory-table {
   width: 100%;
   border-collapse: collapse;

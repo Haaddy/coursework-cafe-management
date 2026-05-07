@@ -92,4 +92,46 @@ async function deleteMenuItem(req, res) {
     }
 }
 
-module.exports = {getMenu, createMenuItem, updateMenuItem, deleteMenuItem};
+async function getMenuIngredients(req, res) {
+    try {
+        const { id } = req.params;
+        const ingredients = await menuService.getMenuIngredients(id);
+        return res.json(ingredients);
+    } catch (err) {
+        if (err.message === "Menu item not found") {
+            return res.status(404).json({ error: err.message });
+        }
+        return res.status(500).json({ error: err.message || "Failed to fetch menu ingredients" });
+    }
+}
+
+async function replaceMenuIngredients(req, res) {
+    try {
+        const { id } = req.params;
+        const { ingredients } = req.body || {};
+
+        if (!Array.isArray(ingredients)) {
+            return res.status(400).json({ error: "ingredients must be an array" });
+        }
+
+        const result = await menuService.replaceMenuIngredients(id, ingredients);
+        return res.json(result);
+    } catch (err) {
+        if (err.message === "Menu item not found") {
+            return res.status(404).json({ error: err.message });
+        }
+        if (err.message.startsWith("Inventory item not found:") || err.message === "qtyPerUnit must be a positive number") {
+            return res.status(400).json({ error: err.message });
+        }
+        return res.status(500).json({ error: err.message || "Failed to update menu ingredients" });
+    }
+}
+
+module.exports = {
+    getMenu,
+    createMenuItem,
+    updateMenuItem,
+    deleteMenuItem,
+    getMenuIngredients,
+    replaceMenuIngredients,
+};
