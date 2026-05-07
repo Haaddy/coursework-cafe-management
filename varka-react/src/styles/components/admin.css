@@ -136,6 +136,42 @@
   font-weight: 700;
 }
 
+.admin-inventory-page__form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 18px;
+}
+
+.admin-inventory-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.admin-inventory-page__table-wrap {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.admin-inventory-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-inventory-table th,
+.admin-inventory-table td {
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  padding: 10px 8px;
+}
+
+.admin-inventory-table__actions {
+  display: flex;
+  gap: 8px;
+}
+
 .admin-unlock-modal__content {
   width: min(440px, 94%);
 }

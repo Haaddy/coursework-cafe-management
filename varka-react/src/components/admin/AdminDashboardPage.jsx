@@ -18,6 +18,14 @@ const dashboardCards = [
     to: "/admin/stats",
     buttonLabel: "Открыть статистику",
   },
+  {
+    id: "inventory",
+    title: "Склад",
+    description:
+      "Контролируйте остатки ингредиентов и товаров для продажи, отмечайте пополнения.",
+    to: "/admin/inventory",
+    buttonLabel: "Открыть склад",
+  },
 ];
 
 function AdminDashboardPage() {

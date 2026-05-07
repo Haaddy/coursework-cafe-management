@@ -19,7 +19,7 @@ app.use("/orders", orderRoutes);
 const menuRoutes = require("./routes/menuRoutes");
 app.use("/menu", menuRoutes);
 
-const adminAuthRoutes = require("./routes/adminAuthRoutes");
-app.use("/admin/auth", adminAuthRoutes);
+const inventoryRoutes = require("./routes/inventoryRoutes");
+app.use("/inventory", inventoryRoutes);
 
 module.exports = app;

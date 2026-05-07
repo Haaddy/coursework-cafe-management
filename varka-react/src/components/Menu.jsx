@@ -1,6 +1,5 @@
 import CategoryButtons from "./CategoryButtons";
 import ProductCard from "./ProductCard";
-import { AdminAccessButton } from "./admin";
 
 
 function Menu(props)  {
@@ -10,7 +9,6 @@ function Menu(props)  {
         activeCategory,
         onCategoryChange,
         menu,
-        onClickAdminButton,
     } =props
 
     const fillteredCategory = activeCategory 
@@ -21,7 +19,6 @@ function Menu(props)  {
          <section className="menu">
           <div className="menu__header">
             <h2 className="menu__title">Меню</h2>
-            <AdminAccessButton onClick={onClickAdminButton} />
           </div>
 
            <CategoryButtons 

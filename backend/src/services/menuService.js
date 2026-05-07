@@ -1,86 +1,86 @@
-const fs = require("fs");
-const path = require("path");
-
-const MENU_DB_Path = path.join(__dirname, "../data/menuDB.json");
-
-
-async function readDb(){
-    const rawData = await fs.promises.readFile(MENU_DB_Path, "utf-8");
-    return JSON.parse(rawData);
-}
-
-async function writeDb(data){
-    await fs.promises.writeFile(MENU_DB_Path, JSON.stringify(data, null, 2));
-}
+const { all, get, run, initializeDatabase } = require("../data/database");
 
 
 async function getMenu(){
-    const db = await readDb();
-    return db.products;
+    await initializeDatabase();
+    const rows = await all(
+        "SELECT id, name, category, is_volumes, price_json FROM menu ORDER BY id ASC"
+    );
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        isVolumes: Boolean(row.is_volumes),
+        price: JSON.parse(row.price_json),
+    }));
 }
 
 async function createMenuItem(itemData) {
-    const db = await readDb();
-    const products = db.products || [];
+    await initializeDatabase();
+    const insert = await run(
+        "INSERT INTO menu (name, category, is_volumes, price_json) VALUES (?, ?, ?, ?)",
+        [
+            itemData.name,
+            itemData.category,
+            itemData.isVolumes ? 1 : 0,
+            JSON.stringify(itemData.price),
+        ]
+    );
 
-    const nextId = products.length
-        ? Math.max(...products.map((item) => Number(item.id) || 0)) + 1
-        : 1;
-
-    const newItem = {
-        id: nextId,
+    return {
+        id: insert.lastID,
         name: itemData.name,
         category: itemData.category,
         isVolumes: Boolean(itemData.isVolumes),
         price: itemData.price,
     };
-
-    products.push(newItem);
-    db.products = products;
-
-    await writeDb(db);
-    return newItem;
 }
 
 async function updateMenuItem(id, itemData) {
-    const db = await readDb();
-    const products = db.products || [];
-    const index = products.findIndex((item) => String(item.id) === String(id));
-
-    if (index === -1) {
+    await initializeDatabase();
+    const existing = await get("SELECT id FROM menu WHERE id = ?", [id]);
+    if (!existing) {
         throw new Error("Menu item not found");
     }
+    await run(
+        "UPDATE menu SET name = ?, category = ?, is_volumes = ?, price_json = ? WHERE id = ?",
+        [
+            itemData.name,
+            itemData.category,
+            itemData.isVolumes ? 1 : 0,
+            JSON.stringify(itemData.price),
+            id,
+        ]
+    );
 
-    const current = products[index];
-    const updatedItem = {
-        ...current,
+    return {
+        id: Number(id),
         name: itemData.name,
         category: itemData.category,
         isVolumes: Boolean(itemData.isVolumes),
         price: itemData.price,
     };
-
-    products[index] = updatedItem;
-    db.products = products;
-
-    await writeDb(db);
-    return updatedItem;
 }
 
 async function deleteMenuItem(id) {
-    const db = await readDb();
-    const products = db.products || [];
-    const index = products.findIndex((item) => String(item.id) === String(id));
-
-    if (index === -1) {
+    await initializeDatabase();
+    const existing = await get(
+        "SELECT id, name, category, is_volumes, price_json FROM menu WHERE id = ?",
+        [id]
+    );
+    if (!existing) {
         throw new Error("Menu item not found");
     }
+    await run("DELETE FROM menu WHERE id = ?", [id]);
 
-    const [deletedItem] = products.splice(index, 1);
-    db.products = products;
-
-    await writeDb(db);
-    return deletedItem;
+    return {
+        id: existing.id,
+        name: existing.name,
+        category: existing.category,
+        isVolumes: Boolean(existing.is_volumes),
+        price: JSON.parse(existing.price_json),
+    };
 }
 
 module.exports = {getMenu, createMenuItem, updateMenuItem, deleteMenuItem};

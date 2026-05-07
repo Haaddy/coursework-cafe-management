@@ -2,8 +2,6 @@ import Menu from "./Menu";
 import Cart from "./Cart";
 import OrderModal from "./OrderModal";
 import OrdersButton from "./OrdersButton";
-import { AdminUnlockModal } from "./admin";
-import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react"
 
 function HomePage() {
@@ -12,9 +10,6 @@ const [cart, setCart] = useState([])
 const [menu, setMenu] = useState([])
 const [activeCategory, setActiveCategory] = useState(null)
 const [modalState, setModalState] = useState(false)
-const [adminModalState, setAdminModalState] = useState(false)
-const [adminErrorText, setAdminErrorText] = useState("")
-const navigate = useNavigate();
    useEffect(() => {
     fetch("http://localhost:3001/menu")
     .then(res => res.json())
@@ -57,11 +52,6 @@ const navigate = useNavigate();
     
   }
 
-  const onClickAdminButton = () => {
-    setAdminErrorText("")
-    setAdminModalState(true)
-  }
-
  const onSubmitOrder = (orderName) => {
   const order = {
     name: orderName,
@@ -90,41 +80,6 @@ const navigate = useNavigate();
     
   }
 
-  const onCloseAdminModal = () => {
-    setAdminErrorText("")
-    setAdminModalState(false)
-  }
-
-  const onSubmitAdminKey = (adminKey) => {
-    if (!adminKey) {
-      setAdminErrorText("Введите ключ администратора.")
-      return
-    }
-
-    fetch("http://localhost:3001/admin/auth/unlock", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin: adminKey }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Неверный PIN");
-        }
-        return data;
-      })
-      .then((data) => {
-        localStorage.setItem("admin_token", data.token);
-        setAdminErrorText("");
-        setAdminModalState(false);
-        navigate("/admin");
-      })
-      .catch((err) => {
-        setAdminErrorText(err.message || "Ошибка сети");
-      })
-    
-  }
-
     return (<div className="app">
         <div className="app__container">
           <Menu 
@@ -132,7 +87,6 @@ const navigate = useNavigate();
           addToCart={addToCart}
           onCategoryChange={onCategoryChange}
           menu={menu}
-          onClickAdminButton={onClickAdminButton}
           />
   
           <Cart 
@@ -151,13 +105,6 @@ const navigate = useNavigate();
           modalState= {modalState}
           onSubmitOrder={onSubmitOrder}
           onClose={onClose}
-        />
-
-        <AdminUnlockModal
-          isOpen={adminModalState}
-          errorText={adminErrorText}
-          onClose={onCloseAdminModal}
-          onSubmit={onSubmitAdminKey}
         />
       </div>)
 }
