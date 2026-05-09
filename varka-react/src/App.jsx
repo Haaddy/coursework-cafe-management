@@ -6,6 +6,7 @@ import AdminMenuPage from "./components/admin/AdminMenuPage";
 import AdminStatsPage from "./components/admin/AdminStatsPage";
 import AdminInventoryPage from "./components/admin/AdminInventoryPage";
 import AdminRecipesPage from "./components/admin/AdminRecipesPage";
+import AdminEmployeesPage from "./components/admin/AdminEmployeesPage";
 
 
 
@@ -29,6 +30,7 @@ function App() {
       <Route path="/admin/stats" element={<AdminStatsPage/>}></Route>
       <Route path="/admin/inventory" element={<AdminInventoryPage/>}></Route>
       <Route path="/admin/recipes" element={<AdminRecipesPage/>}></Route>
+      <Route path="/admin/employees" element={<AdminEmployeesPage/>}></Route>
     </Routes>
     
 

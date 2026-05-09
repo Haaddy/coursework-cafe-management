@@ -34,6 +34,14 @@ const dashboardCards = [
     to: "/admin/recipes",
     buttonLabel: "Открыть рецепты",
   },
+  {
+    id: "employees",
+    title: "Сотрудники",
+    description:
+      "Добавляйте сотрудников, меняйте их статус и управляйте персоналом смены.",
+    to: "/admin/employees",
+    buttonLabel: "Открыть сотрудников",
+  },
 ];
 
 function AdminDashboardPage() {

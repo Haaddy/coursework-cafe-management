@@ -11,7 +11,7 @@ function mapOrderRowToBase(orderRow) {
     };
 }
 
-async function hydrateOrder(orderRow) {
+async function expandOrder(orderRow) { // 
     const itemsRows = await all(
         `SELECT menu_id, name_snapshot, price_snapshot, volume
          FROM order_items
@@ -37,7 +37,7 @@ async function getOrders() {
     const orderRows = await all(
         "SELECT id, name, status, total_price, created_at FROM orders ORDER BY created_at DESC"
     );
-    return Promise.all(orderRows.map(hydrateOrder));
+    return Promise.all(orderRows.map(expandOrder));
 }
 
 async function getOrderById(id) {
@@ -49,7 +49,7 @@ async function getOrderById(id) {
     if (!orderRow) {
         throw new Error("Order not found");
     }
-    return hydrateOrder(orderRow);
+    return expandOrder(orderRow);
 }
 
 async function createOrder(name, cart) {

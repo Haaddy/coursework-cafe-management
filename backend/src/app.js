@@ -22,4 +22,7 @@ app.use("/menu", menuRoutes);
 const inventoryRoutes = require("./routes/inventoryRoutes");
 app.use("/inventory", inventoryRoutes);
 
+const employeesRoutes = require("./routes/employeesRoutes");
+app.use("/employees", employeesRoutes);
+
 module.exports = app;
