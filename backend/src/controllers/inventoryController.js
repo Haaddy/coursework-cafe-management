@@ -63,9 +63,25 @@ async function deleteInventoryItem(req, res) {
 }
 
 async function getInventoryMovements(req, res) {
-  const itemId = req.query.itemId;
-  const movements = await inventoryService.getInventoryMovements(itemId);
-  res.json(movements);
+  try {
+    const { itemId, from, to, movementType, referenceType, limit } = req.query;
+    const movements = await inventoryService.getInventoryMovements({
+      itemId,
+      from,
+      to,
+      movementType,
+      referenceType,
+      limit,
+    });
+    res.json(movements);
+  } catch (err) {
+    const message = err.message || "Failed to load movements";
+    const status =
+      message.includes("must be") || message.includes("Invalid") || message.includes("required")
+        ? 400
+        : 500;
+    res.status(status).json({ error: message });
+  }
 }
 
 module.exports = {

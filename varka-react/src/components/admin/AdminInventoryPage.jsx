@@ -1,5 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
+
+const API_BASE = "http://localhost:3001";
+
+function formatLocalYmd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function defaultMovementsDateRange() {
+  const to = new Date();
+  const from = new Date(to.getFullYear(), to.getMonth(), 1);
+  return { from: formatLocalYmd(from), to: formatLocalYmd(to) };
+}
+
+function movementTypeLabel(type) {
+  if (type === "in") return "Приход";
+  if (type === "out") return "Расход";
+  return type;
+}
+
+function formatDateTime(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ru-RU");
+}
 
 function AdminInventoryPage() {
   const [inventoryItems, setInventoryItems] = useState([]);
@@ -11,9 +39,17 @@ function AdminInventoryPage() {
   const [itemUnit, setItemUnit] = useState("pcs");
   const [initialQuantity, setInitialQuantity] = useState(0);
 
+  const [{ from: movFrom, to: movTo }, setMovRange] = useState(defaultMovementsDateRange);
+  const [movItemId, setMovItemId] = useState("");
+  const [movType, setMovType] = useState("");
+  const [movRefType, setMovRefType] = useState("");
+  const [movements, setMovements] = useState([]);
+  const [movementsLoading, setMovementsLoading] = useState(false);
+  const [movementsError, setMovementsError] = useState("");
+
   const loadInventory = () => {
     setIsLoading(true);
-    fetch("http://localhost:3001/inventory")
+    fetch(`${API_BASE}/inventory`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Ошибка загрузки: ${res.status}`);
@@ -28,9 +64,40 @@ function AdminInventoryPage() {
       .finally(() => setIsLoading(false));
   };
 
+  const loadMovements = useCallback(() => {
+    const params = new URLSearchParams();
+    if (movFrom) params.set("from", movFrom);
+    if (movTo) params.set("to", movTo);
+    if (movItemId) params.set("itemId", movItemId);
+    if (movType) params.set("movementType", movType);
+    if (movRefType) params.set("referenceType", movRefType);
+    params.set("limit", "500");
+
+    setMovementsLoading(true);
+    setMovementsError("");
+    fetch(`${API_BASE}/inventory/movements?${params.toString()}`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || `Ошибка журнала: ${res.status}`);
+        }
+        return data;
+      })
+      .then((data) => setMovements(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        setMovements([]);
+        setMovementsError(err.message);
+      })
+      .finally(() => setMovementsLoading(false));
+  }, [movFrom, movTo, movItemId, movType, movRefType]);
+
   useEffect(() => {
     loadInventory();
   }, []);
+
+  useEffect(() => {
+    loadMovements();
+  }, [loadMovements]);
 
   const handleCreateItem = () => {
     const normalizedName = itemName.trim();
@@ -48,7 +115,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch("http://localhost:3001/inventory", {
+    fetch(`${API_BASE}/inventory`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -72,6 +139,7 @@ function AdminInventoryPage() {
         setItemUnit("pcs");
         setInitialQuantity(0);
         loadInventory();
+        loadMovements();
       })
       .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
@@ -89,7 +157,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`http://localhost:3001/inventory/${id}/restock`, {
+    fetch(`${API_BASE}/inventory/${id}/restock`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +173,10 @@ function AdminInventoryPage() {
         }
         return res.json();
       })
-      .then(() => loadInventory())
+      .then(() => {
+        loadInventory();
+        loadMovements();
+      })
       .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   };
@@ -116,7 +187,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`http://localhost:3001/inventory/${id}`, {
+    fetch(`${API_BASE}/inventory/${id}`, {
       method: "DELETE",
     })
       .then((res) => {
@@ -124,7 +195,10 @@ function AdminInventoryPage() {
           throw new Error(`Ошибка удаления: ${res.status}`);
         }
       })
-      .then(() => loadInventory())
+      .then(() => {
+        loadInventory();
+        loadMovements();
+      })
       .catch((err) => setError(err.message))
       .finally(() => setIsLoading(false));
   };
@@ -239,6 +313,115 @@ function AdminInventoryPage() {
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="card admin-inventory-page__table-wrap">
+        <h2 className="admin-card__title">Журнал движений</h2>
+        <p style={{ marginTop: 0, color: "var(--color-muted)", fontSize: 14 }}>
+          Приходы и списания по складу. Данные с сервера с учётом фильтров (до 500 записей).
+        </p>
+        <div className="admin-stats-page__filters card" style={{ marginBottom: 12, padding: 14 }}>
+          <label className="admin-stats-page__filter">
+            От
+            <input
+              type="date"
+              className="admin-input"
+              value={movFrom}
+              onChange={(e) => setMovRange((r) => ({ ...r, from: e.target.value }))}
+            />
+          </label>
+          <label className="admin-stats-page__filter">
+            До
+            <input
+              type="date"
+              className="admin-input"
+              value={movTo}
+              onChange={(e) => setMovRange((r) => ({ ...r, to: e.target.value }))}
+            />
+          </label>
+          <label className="admin-stats-page__filter">
+            Позиция
+            <select
+              className="admin-input"
+              value={movItemId}
+              onChange={(e) => setMovItemId(e.target.value)}
+            >
+              <option value="">Все</option>
+              {inventoryItems.map((row) => (
+                <option key={row.id} value={String(row.id)}>
+                  {row.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="admin-stats-page__filter">
+            Тип движения
+            <select
+              className="admin-input"
+              value={movType}
+              onChange={(e) => setMovType(e.target.value)}
+            >
+              <option value="">Все</option>
+              <option value="in">Приход</option>
+              <option value="out">Расход</option>
+            </select>
+          </label>
+          <label className="admin-stats-page__filter">
+            Основание
+            <select
+              className="admin-input"
+              value={movRefType}
+              onChange={(e) => setMovRefType(e.target.value)}
+            >
+              <option value="">Все</option>
+              <option value="order">Заказ</option>
+              <option value="manual">Вручную</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="button button--accent"
+            onClick={loadMovements}
+            disabled={movementsLoading}
+          >
+            {movementsLoading ? "Загрузка…" : "Обновить"}
+          </button>
+        </div>
+        {movementsError && (
+          <p style={{ color: "var(--color-danger, #e85d5d)" }}>{movementsError}</p>
+        )}
+        {movementsLoading && !movements.length ? <p>Загрузка журнала...</p> : null}
+        <div style={{ overflowX: "auto" }}>
+          <table className="admin-inventory-table">
+            <thead>
+              <tr>
+                <th>Дата</th>
+                <th>Позиция</th>
+                <th>Тип</th>
+                <th>Кол-во</th>
+                <th>Причина</th>
+                <th>Основание</th>
+                <th>Связь</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movements.map((row) => (
+                <tr key={row.id}>
+                  <td>{formatDateTime(row.createdAt)}</td>
+                  <td>{row.itemName}</td>
+                  <td>{movementTypeLabel(row.movementType)}</td>
+                  <td>{row.quantity}</td>
+                  <td>{row.reason ?? "—"}</td>
+                  <td>{row.referenceType ?? "—"}</td>
+                  <td className="admin-list-item__price">{row.referenceId ?? "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {!movementsLoading && movements.length === 0 && !movementsError ? (
+          <p style={{ color: "var(--color-muted)" }}>Нет записей за выбранные условия.</p>
+        ) : null}
       </div>
     </section>
   );

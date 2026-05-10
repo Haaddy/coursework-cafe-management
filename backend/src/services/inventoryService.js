@@ -1,4 +1,5 @@
 const { all, get, run, initializeDatabase } = require("../data/database");
+const { parseOptionalDateBounds } = require("../utils/parseDateBounds");
 
 function mapInventoryRow(row) {
   return {
@@ -104,14 +105,79 @@ async function deleteInventoryItem(id) {
   return mapInventoryRow(row);
 }
 
-async function getInventoryMovements(itemId) {
-  await initializeDatabase();
-  const params = [];
-  let whereClause = "";
-  if (itemId != null) {
-    whereClause = "WHERE m.item_id = ?";
-    params.push(itemId);
+const DEFAULT_MOVEMENTS_LIMIT = 500;
+const MAX_MOVEMENTS_LIMIT = 2000;
+
+function assertMovementType(raw) {
+  if (raw == null || String(raw).trim() === "") {
+    return null;
   }
+  const v = String(raw).toLowerCase();
+  if (v !== "in" && v !== "out") {
+    throw new Error("movementType must be in or out");
+  }
+  return v;
+}
+
+function parseMovementsLimit(raw) {
+  if (raw == null || String(raw).trim() === "") {
+    return DEFAULT_MOVEMENTS_LIMIT;
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 1) {
+    throw new Error("limit must be a positive number");
+  }
+  return Math.min(Math.floor(n), MAX_MOVEMENTS_LIMIT);
+}
+
+/**
+ * @param {object} filters
+ * @param {string|number|undefined} filters.itemId
+ * @param {string|undefined} filters.from
+ * @param {string|undefined} filters.to
+ * @param {string|undefined} filters.movementType — in | out
+ * @param {string|undefined} filters.referenceType — например order, manual
+ * @param {string|number|undefined} filters.limit — по умолчанию 500, макс. 2000
+ */
+async function getInventoryMovements(filters = {}) {
+  await initializeDatabase();
+
+  const { fromIso, toIso } = parseOptionalDateBounds(filters.from, filters.to);
+  const movementType = assertMovementType(filters.movementType);
+  const limit = parseMovementsLimit(filters.limit);
+
+  const clauses = [];
+  const params = [];
+
+  if (filters.itemId != null && String(filters.itemId).trim() !== "") {
+    const id = Number(filters.itemId);
+    if (!Number.isFinite(id)) {
+      throw new Error("itemId must be a number");
+    }
+    clauses.push("m.item_id = ?");
+    params.push(id);
+  }
+
+  if (fromIso) {
+    clauses.push("datetime(m.created_at) >= datetime(?)");
+    params.push(fromIso);
+  }
+  if (toIso) {
+    clauses.push("datetime(m.created_at) <= datetime(?)");
+    params.push(toIso);
+  }
+  if (movementType) {
+    clauses.push("m.movement_type = ?");
+    params.push(movementType);
+  }
+  if (filters.referenceType != null && String(filters.referenceType).trim() !== "") {
+    clauses.push("m.reference_type = ?");
+    params.push(String(filters.referenceType).trim());
+  }
+
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+
+  params.push(limit);
 
   const rows = await all(
     `SELECT m.id, m.item_id, i.name AS item_name, m.movement_type, m.quantity, m.reason,
@@ -119,7 +185,8 @@ async function getInventoryMovements(itemId) {
      FROM inventory_movements m
      JOIN inventory_items i ON i.id = m.item_id
      ${whereClause}
-     ORDER BY m.created_at DESC, m.id DESC`,
+     ORDER BY m.created_at DESC, m.id DESC
+     LIMIT ?`,
     params
   );
 

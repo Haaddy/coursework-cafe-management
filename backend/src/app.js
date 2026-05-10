@@ -25,4 +25,7 @@ app.use("/inventory", inventoryRoutes);
 const employeesRoutes = require("./routes/employeesRoutes");
 app.use("/employees", employeesRoutes);
 
+const analyticsRoutes = require("./routes/analyticsRoutes");
+app.use("/analytics", analyticsRoutes);
+
 module.exports = app;
