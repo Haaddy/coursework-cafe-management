@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 
 const analyticsController = require("../controllers/analyticsController");
+const { requireManager } = require("../middleware/requireManager");
 
-router.get("/orders", analyticsController.getOrdersAnalytics);
+router.get("/orders", requireManager, analyticsController.getOrdersAnalytics);
 
 module.exports = router;

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
+import { adminFetch } from "../../utils/adminApi";
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Работает" },
@@ -20,7 +21,7 @@ function AdminEmployeesPage() {
 
   const loadEmployees = () => {
     setIsLoading(true);
-    fetch("http://localhost:3001/employees")
+    adminFetch("/employees")
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) {
@@ -76,7 +77,7 @@ function AdminEmployeesPage() {
 
     setIsLoading(true);
     setError("");
-    fetch("http://localhost:3001/employees", {
+    adminFetch("/employees", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -113,7 +114,7 @@ function AdminEmployeesPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`http://localhost:3001/employees/${employee.id}`, {
+    adminFetch(`/employees/${employee.id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -145,7 +146,7 @@ function AdminEmployeesPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`http://localhost:3001/employees/${employee.id}`, {
+    adminFetch(`/employees/${employee.id}`, {
       method: "DELETE",
     })
       .then(async (res) => {

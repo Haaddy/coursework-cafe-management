@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
-
-const API_BASE = "http://localhost:3001";
+import { adminFetch } from "../../utils/adminApi";
 
 function formatLocalYmd(date) {
   const y = date.getFullYear();
@@ -60,7 +59,7 @@ function AdminStatsPage() {
     setIsLoading(true);
     setError("");
 
-    fetch(`${API_BASE}/analytics/orders?${params.toString()}`)
+    adminFetch(`/analytics/orders?${params.toString()}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
