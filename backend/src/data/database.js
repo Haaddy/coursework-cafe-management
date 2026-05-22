@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const sqlite3 = require("sqlite3").verbose();
+const { seedDemoDataIfNeeded } = require("./seedDemoData");
 
 const DB_PATH = path.join(__dirname, "cafe.sqlite");
 const LEGACY_ORDERS_PATH = path.join(__dirname, "db.json5");
@@ -275,6 +276,7 @@ function initializeDatabase() {
       await ensureOrdersSchema();
       await seedMenuIfNeeded();
       await seedOrdersIfNeeded();
+      await seedDemoDataIfNeeded({ run, get });
       await backfillMissingOrderNumbers();
     })();
   }

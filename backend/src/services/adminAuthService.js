@@ -2,7 +2,6 @@ const crypto = require("crypto");
 const { get, initializeDatabase } = require("../data/database");
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12h
-<<<<<<< HEAD
 const OWNER_SESSION_ID = 0;
 const sessions = new Map();
 
@@ -25,10 +24,6 @@ function isOwnerCredentials(personalCode, password) {
   return personalCode === login && password === ownerPassword;
 }
 
-=======
-const sessions = new Map();
-
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
 class AdminAuthError extends Error {
   constructor(message, statusCode, code) {
     super(message);
@@ -43,7 +38,6 @@ function isManagerPosition(position) {
   return value === "manager" || value === "менеджер";
 }
 
-<<<<<<< HEAD
 function isOwnerPosition(position) {
   const value = String(position || "").trim().toLowerCase();
   return value === "owner" || value === "владелец";
@@ -64,8 +58,6 @@ function mapOwner() {
   };
 }
 
-=======
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
 function mapManager(row) {
   return {
     id: row.id,
@@ -76,18 +68,11 @@ function mapManager(row) {
   };
 }
 
-<<<<<<< HEAD
 function createSession({ employeeId, isOwner = false }) {
   const token = crypto.randomBytes(32).toString("hex");
   sessions.set(token, {
     employeeId: isOwner ? OWNER_SESSION_ID : employeeId,
     isOwner: Boolean(isOwner),
-=======
-function createSession(employeeId) {
-  const token = crypto.randomBytes(32).toString("hex");
-  sessions.set(token, {
-    employeeId,
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
   return token;
@@ -135,7 +120,6 @@ async function loginManager(personalCode, password) {
     throw new AdminAuthError("personalCode and password are required", 400, "ADMIN_CREDENTIALS_REQUIRED");
   }
 
-<<<<<<< HEAD
   if (isOwnerCredentials(normalizedCode, normalizedPassword)) {
     const token = createSession({ isOwner: true });
     return {
@@ -144,8 +128,6 @@ async function loginManager(personalCode, password) {
     };
   }
 
-=======
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
   const adminPassword = String(process.env.ADMIN_PASSWORD || "");
   if (!adminPassword) {
     throw new AdminAuthError("ADMIN_PASSWORD is not configured", 500, "ADMIN_PASSWORD_NOT_CONFIGURED");
@@ -155,11 +137,7 @@ async function loginManager(personalCode, password) {
   }
 
   const managerRow = await getManagerByPersonalCode(normalizedCode);
-<<<<<<< HEAD
   const token = createSession({ employeeId: managerRow.id });
-=======
-  const token = createSession(managerRow.id);
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
   return {
     token,
     manager: mapManager(managerRow),
@@ -171,24 +149,17 @@ async function getManagerByToken(token) {
   const session = getSession(token);
   if (!session) return null;
 
-<<<<<<< HEAD
   if (session.isOwner) {
     return isOwnerConfigured() ? mapOwner() : null;
   }
 
-=======
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
   const row = await get(
     `SELECT id, full_name, position, status, personal_code
      FROM employees
      WHERE id = ?`,
     [session.employeeId]
   );
-<<<<<<< HEAD
   if (!row || row.status !== "active" || !canAccessAdmin(row.position)) {
-=======
-  if (!row || row.status !== "active" || !isManagerPosition(row.position)) {
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
     clearSession(token);
     return null;
   }

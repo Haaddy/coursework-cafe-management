@@ -40,21 +40,13 @@ function AdminLoginPage() {
       <div className="card admin-login-card">
         <h2 className="admin-card__title">Вход в админ-панель</h2>
         <p className="admin-card__description">
-<<<<<<< HEAD
           Менеджер: код сотрудника из БД и пароль ADMIN_PASSWORD. Владелец: логин и пароль из ADMIN_OWNER_* в .env.
-=======
-          Войдите как менеджер: код сотрудника + пароль администратора.
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
         </p>
 
         <form className="admin-create-modal__form" onSubmit={onSubmit}>
           <input
             className="admin-unlock-modal__input"
-<<<<<<< HEAD
             placeholder="Код сотрудника или логин владельца"
-=======
-            placeholder="Код сотрудника"
->>>>>>> e068652616301dcbf4734e70f1897badd5e1af19
             value={personalCode}
             onChange={(event) => setPersonalCode(event.target.value)}
           />

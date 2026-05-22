@@ -1,6 +1,33 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
 import { adminFetch } from "../../utils/adminApi";
+
+function formatLocalYmd(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function defaultDateRange() {
+  const to = new Date();
+  const from = new Date(to.getFullYear(), to.getMonth(), 1);
+  return { from: formatLocalYmd(from), to: formatLocalYmd(to) };
+}
+
+const moneyFormatter = new Intl.NumberFormat("ru-BY", {
+  style: "currency",
+  currency: "BYN",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+function formatMoney(value) {
+  if (value == null || Number.isNaN(value)) {
+    return "—";
+  }
+  return moneyFormatter.format(value);
+}
 
 const STATUS_OPTIONS = [
   { value: "active", label: "Работает" },
@@ -18,6 +45,42 @@ function AdminEmployeesPage() {
   const [position, setPosition] = useState("");
   const [status, setStatus] = useState("active");
   const [personalCode, setPersonalCode] = useState("");
+
+  const [{ from: statsFrom, to: statsTo }, setStatsRange] = useState(defaultDateRange);
+  const [employeeStats, setEmployeeStats] = useState(null);
+  const [topEmployees, setTopEmployees] = useState(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState("");
+
+  const loadEmployeeStats = useCallback(() => {
+    if (!statsFrom || !statsTo) {
+      setStatsError("Укажите даты «От» и «До»");
+      return;
+    }
+
+    const params = new URLSearchParams({ from: statsFrom, to: statsTo });
+    setStatsLoading(true);
+    setStatsError("");
+
+    adminFetch(`/analytics/employees?${params.toString()}`)
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || `Ошибка ${res.status}`);
+        }
+        return data;
+      })
+      .then((data) => {
+        setEmployeeStats(data.summary || null);
+        setTopEmployees(Array.isArray(data.topEmployees) ? data.topEmployees : null);
+      })
+      .catch((err) => {
+        setEmployeeStats(null);
+        setTopEmployees(null);
+        setStatsError(err.message || "Не удалось загрузить статистику");
+      })
+      .finally(() => setStatsLoading(false));
+  }, [statsFrom, statsTo]);
 
   const loadEmployees = () => {
     setIsLoading(true);
@@ -40,6 +103,10 @@ function AdminEmployeesPage() {
   useEffect(() => {
     loadEmployees();
   }, []);
+
+  useEffect(() => {
+    loadEmployeeStats();
+  }, [loadEmployeeStats]);
 
   const filteredEmployees = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -301,6 +368,94 @@ function AdminEmployeesPage() {
             ) : null}
           </tbody>
         </table>
+      </div>
+
+      <div className="card admin-employees-page__stats">
+        <h2 className="admin-card__title">Статистика по закрытым чекам</h2>
+        <p className="admin-card__description">
+          Кто чаще закрывал оплаченные заказы на POS за выбранный период (по дате закрытия).
+        </p>
+
+        <div className="admin-employees-page__stats-filters">
+          <label className="admin-stats-page__filter">
+            От
+            <input
+              type="date"
+              className="admin-input"
+              value={statsFrom}
+              onChange={(e) => setStatsRange((r) => ({ ...r, from: e.target.value }))}
+            />
+          </label>
+          <label className="admin-stats-page__filter">
+            До
+            <input
+              type="date"
+              className="admin-input"
+              value={statsTo}
+              onChange={(e) => setStatsRange((r) => ({ ...r, to: e.target.value }))}
+            />
+          </label>
+          <button
+            type="button"
+            className="button button--accent"
+            onClick={loadEmployeeStats}
+            disabled={statsLoading}
+          >
+            {statsLoading ? "Загрузка…" : "Применить"}
+          </button>
+        </div>
+
+        {statsError ? <p className="admin-stats-page__error">{statsError}</p> : null}
+
+        <div className="admin-employees-page__stats-summary admin-stats-grid">
+          <article className="card admin-stat-card">
+            <p className="admin-stat-card__label">Закрыто чеков</p>
+            <p className="admin-stat-card__value">
+              {employeeStats ? employeeStats.closedCount : statsLoading ? "…" : "—"}
+            </p>
+          </article>
+          <article className="card admin-stat-card">
+            <p className="admin-stat-card__label">Сумма закрытых</p>
+            <p className="admin-stat-card__value">
+              {employeeStats ? formatMoney(employeeStats.totalRevenue) : statsLoading ? "…" : "—"}
+            </p>
+          </article>
+        </div>
+
+        {topEmployees && topEmployees.length > 0 ? (
+          <div className="admin-employees-page__stats-table-wrap">
+            <table className="admin-inventory-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Сотрудник</th>
+                  <th>Должность</th>
+                  <th>Код</th>
+                  <th>Закрыто чеков</th>
+                  <th>Сумма</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topEmployees.map((row) => (
+                  <tr key={row.employeeId}>
+                    <td>{row.rank}</td>
+                    <td>{row.fullName}</td>
+                    <td>{row.position}</td>
+                    <td>{row.personalCode}</td>
+                    <td>{row.closedCount}</td>
+                    <td>{formatMoney(row.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {topEmployees?.length === 0 && !statsLoading && employeeStats?.closedCount === 0 ? (
+          <p className="admin-card__description admin-employees-page__stats-empty">
+            За период нет закрытых чеков с указанным сотрудником.
+          </p>
+        ) : null}
       </div>
     </section>
   );

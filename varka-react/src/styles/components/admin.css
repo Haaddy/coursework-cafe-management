@@ -93,6 +93,9 @@
 }
 
 .admin-stats-page__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
   justify-content: flex-start;
   gap: 12px;
   margin-bottom: 16px;
@@ -136,6 +139,17 @@
   font-weight: 700;
 }
 
+.admin-stat-card__hint {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.admin-stats-page__peak-row td {
+  font-weight: 600;
+  color: var(--color-accent, #c9a227);
+}
+
 .admin-inventory-page__form {
   display: grid;
   gap: 12px;
@@ -155,11 +169,16 @@
   padding: 18px;
 }
 
+.admin-employees-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .admin-employees-page__form {
   display: grid;
   gap: 12px;
-  margin-bottom: 16px;
-  padding: 18px;
+  padding: 20px;
 }
 
 .admin-employees-page__grid {
@@ -171,7 +190,40 @@
 .admin-employees-page__table-wrap {
   display: grid;
   gap: 12px;
-  padding: 18px;
+  padding: 20px;
+}
+
+.admin-employees-page__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 4px;
+  padding: 20px;
+}
+
+.admin-employees-page__stats-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+
+.admin-employees-page__stats-summary {
+  margin: 0;
+}
+
+.admin-employees-page__stats-table-wrap {
+  overflow-x: auto;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.admin-employees-page__stats-table-wrap .admin-inventory-table {
+  min-width: 560px;
+}
+
+.admin-employees-page__stats-empty {
+  margin: 0;
 }
 
 .admin-employees-page__table-head {
