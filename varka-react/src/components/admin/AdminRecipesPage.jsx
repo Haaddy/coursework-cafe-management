@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
+import { adminFetch } from "../../utils/adminApi";
 
 function createEmptyRow() {
   return {
@@ -22,11 +23,11 @@ function AdminRecipesPage() {
   useEffect(() => {
     setIsLoading(true);
     Promise.all([
-      fetch("http://localhost:3001/menu").then((res) => {
+      adminFetch("/menu").then((res) => {
         if (!res.ok) throw new Error("Не удалось загрузить меню");
         return res.json();
       }),
-      fetch("http://localhost:3001/inventory").then((res) => {
+      adminFetch("/inventory").then((res) => {
         if (!res.ok) throw new Error("Не удалось загрузить склад");
         return res.json();
       }),
@@ -52,7 +53,7 @@ function AdminRecipesPage() {
     }
 
     setIsLoading(true);
-    fetch(`http://localhost:3001/menu/${menuId}/ingredients`)
+    adminFetch(`/menu/${menuId}/ingredients`)
       .then((res) => {
         if (!res.ok) throw new Error("Не удалось загрузить рецепт");
         return res.json();
@@ -117,7 +118,7 @@ function AdminRecipesPage() {
     setIsSaving(true);
     setError("");
     setSuccessMessage("");
-    fetch(`http://localhost:3001/menu/${selectedMenuId}/ingredients`, {
+    adminFetch(`/menu/${selectedMenuId}/ingredients`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ingredients: cleaned }),

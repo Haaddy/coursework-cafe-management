@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
-
-const API_BASE = "http://localhost:3001";
+import { adminFetch } from "../../utils/adminApi";
 
 function formatLocalYmd(date) {
   const y = date.getFullYear();
@@ -49,7 +48,7 @@ function AdminInventoryPage() {
 
   const loadInventory = () => {
     setIsLoading(true);
-    fetch(`${API_BASE}/inventory`)
+    adminFetch("/inventory")
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Ошибка загрузки: ${res.status}`);
@@ -75,7 +74,7 @@ function AdminInventoryPage() {
 
     setMovementsLoading(true);
     setMovementsError("");
-    fetch(`${API_BASE}/inventory/movements?${params.toString()}`)
+    adminFetch(`/inventory/movements?${params.toString()}`)
       .then(async (res) => {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -115,7 +114,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`${API_BASE}/inventory`, {
+    adminFetch("/inventory", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -157,7 +156,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`${API_BASE}/inventory/${id}/restock`, {
+    adminFetch(`/inventory/${id}/restock`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -187,7 +186,7 @@ function AdminInventoryPage() {
 
     setIsLoading(true);
     setError("");
-    fetch(`${API_BASE}/inventory/${id}`, {
+    adminFetch(`/inventory/${id}`, {
       method: "DELETE",
     })
       .then((res) => {

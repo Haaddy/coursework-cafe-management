@@ -1,5 +1,3 @@
-import {useEffect, useRef} from 'react';
-
 function OrderModal(props) {
 
   const{
@@ -8,24 +6,9 @@ function OrderModal(props) {
     onClose
   }=props
 
-  const inputRef = useRef(null)
-
-  useEffect(()=>{
-    if(modalState){
-      inputRef.current?.focus()
-    }
-
-  }, [modalState])
   const handleSubmit = (e) => {
     e.preventDefault()
-
-    const formData = new FormData(e.target)
-    const customerName = formData.get("customerName")
-
-    if (!customerName.trim()) return
-
-    onSubmitOrder(customerName)
-    e.target.reset()
+    onSubmitOrder()
   }
 
   return (
@@ -40,14 +23,9 @@ function OrderModal(props) {
         <h3 className="modal__title">Оформление заказа</h3>
 
         <form className="modal__form" onSubmit={handleSubmit}>
-          
-          <input
-            className="modal__input"
-            name="customerName"
-            placeholder="Имя клиента"
-            required
-            ref={inputRef}
-          />
+          <p className="order-details__hint">
+            Имя клиента не требуется. После создания заказа будет показан номер заказа.
+          </p>
 
           <button
             className="button button--accent modal__submit"

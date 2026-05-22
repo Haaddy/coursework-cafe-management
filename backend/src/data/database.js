@@ -35,6 +35,17 @@ function all(sql, params = []) {
   });
 }
 
+function normalizeOrderDateForNumber(value) {
+  const parsedDate = value ? new Date(value) : new Date();
+  const safeDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+  return safeDate.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+function buildOrderNumber(dateValue, sequence) {
+  const datePart = normalizeOrderDateForNumber(dateValue);
+  return `${datePart}-${String(sequence).padStart(4, "0")}`;
+}
+
 async function createTables() {
   await run(`
     CREATE TABLE IF NOT EXISTS menu (
@@ -50,9 +61,15 @@ async function createTables() {
     CREATE TABLE IF NOT EXISTS orders (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      order_number TEXT UNIQUE,
       status TEXT NOT NULL DEFAULT 'pending',
       total_price REAL NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL
+      payment_method TEXT,
+      paid_at TEXT,
+      closed_by_employee_id INTEGER,
+      closed_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(closed_by_employee_id) REFERENCES employees(id) ON DELETE SET NULL
     )
   `);
 
@@ -129,6 +146,68 @@ async function createTables() {
   `);
 }
 
+async function ensureOrdersSchema() {
+  const columns = await all("PRAGMA table_info(orders)");
+  const columnNames = new Set(columns.map((column) => column.name));
+
+  if (!columnNames.has("order_number")) {
+    await run("ALTER TABLE orders ADD COLUMN order_number TEXT");
+  }
+  if (!columnNames.has("payment_method")) {
+    await run("ALTER TABLE orders ADD COLUMN payment_method TEXT");
+  }
+  if (!columnNames.has("paid_at")) {
+    await run("ALTER TABLE orders ADD COLUMN paid_at TEXT");
+  }
+  if (!columnNames.has("closed_by_employee_id")) {
+    await run("ALTER TABLE orders ADD COLUMN closed_by_employee_id INTEGER");
+  }
+  if (!columnNames.has("closed_at")) {
+    await run("ALTER TABLE orders ADD COLUMN closed_at TEXT");
+  }
+
+  await run("CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number)");
+  await run("CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at)");
+  await run("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)");
+}
+
+async function backfillMissingOrderNumbers() {
+  const countersByDate = new Map();
+  const existingNumbers = await all(
+    `SELECT order_number
+     FROM orders
+     WHERE order_number IS NOT NULL
+       AND TRIM(order_number) <> ''`
+  );
+
+  for (const row of existingNumbers) {
+    const match = /^(\d{8})-(\d+)$/.exec(String(row.order_number));
+    if (!match) continue;
+    const [, datePart, sequenceValue] = match;
+    const sequence = Number(sequenceValue);
+    const currentMax = countersByDate.get(datePart) || 0;
+    if (sequence > currentMax) {
+      countersByDate.set(datePart, sequence);
+    }
+  }
+
+  const missingRows = await all(
+    `SELECT id, created_at
+     FROM orders
+     WHERE order_number IS NULL
+       OR TRIM(order_number) = ''
+     ORDER BY created_at ASC, id ASC`
+  );
+
+  for (const row of missingRows) {
+    const datePart = normalizeOrderDateForNumber(row.created_at);
+    const nextSequence = (countersByDate.get(datePart) || 0) + 1;
+    countersByDate.set(datePart, nextSequence);
+    const orderNumber = buildOrderNumber(row.created_at, nextSequence);
+    await run("UPDATE orders SET order_number = ? WHERE id = ?", [orderNumber, row.id]);
+  }
+}
+
 async function seedMenuIfNeeded() {
   const row = await get("SELECT COUNT(*) AS count FROM menu");
   if ((row?.count || 0) > 0) return;
@@ -193,8 +272,10 @@ function initializeDatabase() {
     initPromise = (async () => {
       await run("PRAGMA foreign_keys = ON");
       await createTables();
+      await ensureOrdersSchema();
       await seedMenuIfNeeded();
       await seedOrdersIfNeeded();
+      await backfillMissingOrderNumbers();
     })();
   }
   return initPromise;

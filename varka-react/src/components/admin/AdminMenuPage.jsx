@@ -1,6 +1,7 @@
 import AdminSectionHeader from "./AdminSectionHeader";
 
 import { useState, useEffect } from "react";
+import { adminFetch } from "../../utils/adminApi";
 
 function AdminMenuPage() {
   const [menu, setMenu] = useState([]);
@@ -26,7 +27,7 @@ function AdminMenuPage() {
 
   const loadMenu = () => {
     setLoading(true);
-    fetch("http://localhost:3001/menu")
+    adminFetch("/menu")
       .then((res) => {
         if (!res.ok) {
           throw new Error("Failed to fetch menu");
@@ -186,7 +187,7 @@ function AdminMenuPage() {
     }
 
     setIsSaving(true);
-    fetch("http://localhost:3001/menu", {
+    adminFetch("/menu", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -265,7 +266,7 @@ function AdminMenuPage() {
     }
 
     setIsUpdating(true);
-    fetch(`http://localhost:3001/menu/${encodeURIComponent(editingItemId)}`, {
+    adminFetch(`/menu/${encodeURIComponent(editingItemId)}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -296,7 +297,7 @@ function AdminMenuPage() {
     }
 
     setIsDeletingId(item.id);
-    fetch(`http://localhost:3001/menu/${encodeURIComponent(item.id)}`, {
+    adminFetch(`/menu/${encodeURIComponent(item.id)}`, {
       method: "DELETE",
     })
       .then(async (res) => {

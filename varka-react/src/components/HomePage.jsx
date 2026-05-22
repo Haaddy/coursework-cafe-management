@@ -3,6 +3,7 @@ import Cart from "./Cart";
 import OrderModal from "./OrderModal";
 import OrdersButton from "./OrdersButton";
 import { useState, useEffect } from "react"
+import { API_BASE_URL } from "../constants/api";
 
 function HomePage() {
 
@@ -11,7 +12,7 @@ const [menu, setMenu] = useState([])
 const [activeCategory, setActiveCategory] = useState(null)
 const [modalState, setModalState] = useState(false)
    useEffect(() => {
-    fetch("http://localhost:3001/menu")
+    fetch(`${API_BASE_URL}/menu`)
     .then(res => res.json())
     .then(data => {
       console.log(data);
@@ -52,26 +53,31 @@ const [modalState, setModalState] = useState(false)
     
   }
 
- const onSubmitOrder = (orderName) => {
+ const onSubmitOrder = () => {
   const order = {
-    name: orderName,
     cart: cart
   };
 
-  fetch("http://localhost:3001/orders", {
+  fetch(`${API_BASE_URL}/orders`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(order),
   })
-    .then(res => res.json())
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error("Не удалось создать заказ");
+      }
+      return res.json();
+    })
     .then(data => {
       console.log("order is add:", data);
+      alert(`Заказ №${data.orderNumber || data.id} создан`);
       setCart([]);
       setModalState(false);
     })
-    .catch(err => console.error(err));
+    .catch(err => alert(err.message || "Ошибка создания заказа"));
 };
 
   const onClose =() =>{

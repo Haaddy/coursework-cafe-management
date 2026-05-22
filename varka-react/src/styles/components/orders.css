@@ -16,6 +16,25 @@
   font-size: 24px;
 }
 
+.orders__controls {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orders__filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orders__select,
+.orders__date,
+.orders__search {
+  max-width: 240px;
+}
+
 .orders__list {
   display: flex;
   flex-direction: column;
@@ -210,6 +229,40 @@
 .order-details__footer .button {
   flex: 1;
   min-width: 120px;
+}
+
+.order-details__input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.order-details__error {
+  margin: 0;
+  color: #d92d20;
+  font-size: 14px;
+}
+
+.order-details__success {
+  margin: 0;
+  color: #067647;
+  font-size: 14px;
+}
+
+.order-details__section--actions {
+  border-top: 1px solid var(--color-border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.order-details__close-checkout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.order-details__close-checkout .order-details__hint {
+  width: 100%;
 }
 
 
