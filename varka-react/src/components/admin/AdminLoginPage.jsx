@@ -32,23 +32,21 @@ function AdminLoginPage() {
   };
 
   return (
-    <section className="admin-page">
-      <Link to="/" className="button button--secondary orders__back">
+    <section className="admin-login-page">
+      <Link to="/" className="button button--secondary admin-login-page__back">
         ← На главную
       </Link>
 
       <div className="card admin-login-card">
-        <h2 className="admin-card__title">Вход в админ-панель</h2>
-        <p className="admin-card__description">
-          Менеджер: код сотрудника из БД и пароль ADMIN_PASSWORD. Владелец: логин и пароль из ADMIN_OWNER_* в .env.
-        </p>
+        <h2 className="admin-login-card__title">Вход в админ-панель</h2>
 
-        <form className="admin-create-modal__form" onSubmit={onSubmit}>
+        <form className="admin-login-card__form" onSubmit={onSubmit}>
           <input
             className="admin-unlock-modal__input"
             placeholder="Код сотрудника или логин владельца"
             value={personalCode}
             onChange={(event) => setPersonalCode(event.target.value)}
+            autoComplete="username"
           />
           <input
             className="admin-unlock-modal__input"
@@ -56,6 +54,7 @@ function AdminLoginPage() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            autoComplete="current-password"
           />
 
           {error ? (
@@ -64,7 +63,7 @@ function AdminLoginPage() {
             </p>
           ) : null}
 
-          <button className="button button--accent" type="submit" disabled={isSubmitting}>
+          <button className="button button--accent admin-login-card__submit" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Входим..." : "Войти"}
           </button>
         </form>
