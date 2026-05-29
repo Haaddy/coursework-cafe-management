@@ -11,6 +11,7 @@ const [cart, setCart] = useState([])
 const [menu, setMenu] = useState([])
 const [activeCategory, setActiveCategory] = useState(null)
 const [modalState, setModalState] = useState(false)
+const [orderError, setOrderError] = useState("")
    useEffect(() => {
     fetch(`${API_BASE_URL}/menu`)
     .then(res => res.json())
@@ -47,44 +48,55 @@ const [modalState, setModalState] = useState(false)
     setActiveCategory(category)
     
   }
-  const onClickSubmitOrderButton = () =>{
-    console.log("модалкаоткрта");
-    setModalState(true)
-    
-  }
-
- const onSubmitOrder = () => {
-  const order = {
-    cart: cart
+  const isCartItemAvailable = (cartItem) => {
+    const menuItem = menu.find((item) => String(item.id) === String(cartItem.id));
+    if (!menuItem) {
+      return true;
+    }
+    if (menuItem.isVolumes) {
+      return menuItem.volumeAvailability?.[cartItem.volume] !== false;
+    }
+    return menuItem.available !== false;
   };
 
-  fetch(`${API_BASE_URL}/orders`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(order),
-  })
-    .then((res) => {
+  const onClickSubmitOrderButton = () => {
+    setOrderError("");
+    setModalState(true);
+  };
+
+  const onSubmitOrder = async () => {
+    const unavailableItem = cart.find((item) => !isCartItemAvailable(item));
+    if (unavailableItem) {
+      setOrderError(`«${unavailableItem.name}» недоступен — уберите его из корзины или выберите другой объём.`);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ cart }),
+      });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error("Не удалось создать заказ");
+        throw new Error(data.error || "Не удалось создать заказ");
       }
-      return res.json();
-    })
-    .then(data => {
-      console.log("order is add:", data);
+
       alert(`Заказ №${data.orderNumber || data.id} создан`);
       setCart([]);
+      setOrderError("");
       setModalState(false);
-    })
-    .catch(err => alert(err.message || "Ошибка создания заказа"));
-};
+    } catch (err) {
+      setOrderError(err.message || "Ошибка создания заказа");
+    }
+  };
 
-  const onClose =() =>{
-    console.log("modal are close");
-    setModalState(false)
-    
-  }
+  const onClose = () => {
+    setOrderError("");
+    setModalState(false);
+  };
 
     return (<div className="app">
         <div className="app__container">
@@ -108,9 +120,10 @@ const [modalState, setModalState] = useState(false)
   
         
         <OrderModal
-          modalState= {modalState}
+          modalState={modalState}
           onSubmitOrder={onSubmitOrder}
           onClose={onClose}
+          orderError={orderError}
         />
       </div>)
 }

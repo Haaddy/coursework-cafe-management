@@ -293,7 +293,7 @@ function AdminInventoryPage() {
                 <td className="admin-inventory-table__actions">
                   <button
                     type="button"
-                    className="button button--ghost"
+                    className="button button--secondary admin-restock-button"
                     onClick={() => handleRestockItem(row.id)}
                     disabled={isLoading}
                   >

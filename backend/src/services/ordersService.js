@@ -381,7 +381,7 @@ async function createOrder(name, cart) {
 
                 if (currentQty < requiredQty) {
                     throw makeOrderServiceError(
-                        `Not enough stock for ingredient #${recipeRow.inventory_item_id}`,
+                        `Недостаточно ингредиентов для «${item.name}»`,
                         400,
                         "ORDER_STOCK_SHORTAGE"
                     );

@@ -18,6 +18,26 @@
   color: var(--color-muted);
 }
 
+.product-card__stock-warning {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #ff9b9b;
+}
+
+.product-card--unavailable {
+  opacity: 0.92;
+}
+
+.product-card__volume-option--unavailable span {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.product-card__volume-option input:disabled + span {
+  cursor: not-allowed;
+}
+
 .product-card__volume-label {
   margin-top: 10px;
   font-size: 12px;

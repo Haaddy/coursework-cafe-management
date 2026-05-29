@@ -1,10 +1,11 @@
 function OrderModal(props) {
 
-  const{
+  const {
     modalState,
     onSubmitOrder,
-    onClose
-  }=props
+    onClose,
+    orderError = "",
+  } = props;
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -24,8 +25,14 @@ function OrderModal(props) {
 
         <form className="modal__form" onSubmit={handleSubmit}>
           <p className="order-details__hint">
-            Имя клиента не требуется. После создания заказа будет показан номер заказа.
+            После создания заказа будет показан номер заказа.
           </p>
+
+          {orderError ? (
+            <p className="order-details__error" role="alert">
+              {orderError}
+            </p>
+          ) : null}
 
           <button
             className="button button--accent modal__submit"

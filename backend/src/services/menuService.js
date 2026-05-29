@@ -1,5 +1,96 @@
 const { all, get, run, initializeDatabase } = require("../data/database");
 
+const RECIPE_STOCK_SQL = `SELECT mi.inventory_item_id, mi.qty_per_unit, s.quantity,
+                i.name AS inventory_item_name
+         FROM menu_ingredients mi
+         JOIN inventory_stock s ON s.item_id = mi.inventory_item_id
+         JOIN inventory_items i ON i.id = mi.inventory_item_id
+         WHERE mi.menu_id = ?
+           AND (
+             mi.volume = ?
+             OR (
+               mi.volume IS NULL
+               AND NOT EXISTS (
+                 SELECT 1
+                 FROM menu_ingredients mi2
+                 WHERE mi2.menu_id = mi.menu_id
+                   AND mi2.inventory_item_id = mi.inventory_item_id
+                   AND mi2.volume = ?
+               )
+             )
+           )`;
+
+async function getRecipeStockRows(menuId, volume) {
+    return all(RECIPE_STOCK_SQL, [menuId, volume, volume]);
+}
+
+function buildStockMessage(missingIngredients) {
+    if (!missingIngredients.length) {
+        return null;
+    }
+    if (missingIngredients.length === 1) {
+        return `Закончился ингредиент: ${missingIngredients[0].name}`;
+    }
+    return "Недостаточно ингредиентов";
+}
+
+function evaluateRecipeAvailability(recipeRows) {
+    if (!recipeRows.length) {
+        return { available: true, missingIngredients: [], stockMessage: null };
+    }
+
+    const missingIngredients = [];
+    for (const row of recipeRows) {
+        const requiredQty = Number(row.qty_per_unit);
+        const currentQty = Number(row.quantity || 0);
+        if (currentQty < requiredQty) {
+            missingIngredients.push({
+                inventoryItemId: row.inventory_item_id,
+                name: row.inventory_item_name,
+                requiredQty,
+                currentQty,
+            });
+        }
+    }
+
+    return {
+        available: missingIngredients.length === 0,
+        missingIngredients,
+        stockMessage: buildStockMessage(missingIngredients),
+    };
+}
+
+async function getMenuItemAvailability(menuId, isVolumes, price) {
+    if (!isVolumes) {
+        const recipeRows = await getRecipeStockRows(menuId, null);
+        const availability = evaluateRecipeAvailability(recipeRows);
+        return {
+            available: availability.available,
+            volumeAvailability: null,
+            stockMessage: availability.stockMessage,
+        };
+    }
+
+    const volumeKeys =
+        typeof price === "object" && price !== null ? Object.keys(price) : ["250", "350", "500"];
+    const volumeAvailability = {};
+    let anyAvailable = false;
+
+    for (const volume of volumeKeys) {
+        const recipeRows = await getRecipeStockRows(menuId, volume);
+        const availability = evaluateRecipeAvailability(recipeRows);
+        volumeAvailability[volume] = availability.available;
+        if (availability.available) {
+            anyAvailable = true;
+        }
+    }
+
+    return {
+        available: anyAvailable,
+        volumeAvailability,
+        stockMessage: anyAvailable ? null : "Недостаточно ингредиентов для всех объёмов",
+    };
+}
 
 async function getMenu(){
     await initializeDatabase();
@@ -7,13 +98,25 @@ async function getMenu(){
         "SELECT id, name, category, is_volumes, price_json FROM menu ORDER BY id ASC"
     );
 
-    return rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        category: row.category,
-        isVolumes: Boolean(row.is_volumes),
-        price: JSON.parse(row.price_json),
-    }));
+    const menu = [];
+    for (const row of rows) {
+        const price = JSON.parse(row.price_json);
+        const isVolumes = Boolean(row.is_volumes);
+        const availability = await getMenuItemAvailability(row.id, isVolumes, price);
+
+        menu.push({
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            isVolumes,
+            price,
+            available: availability.available,
+            volumeAvailability: availability.volumeAvailability,
+            stockMessage: availability.stockMessage,
+        });
+    }
+
+    return menu;
 }
 
 async function createMenuItem(itemData) {

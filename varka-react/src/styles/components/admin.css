@@ -379,6 +379,15 @@
   gap: 8px;
 }
 
+.admin-restock-button {
+  border-color: #2b6f3a;
+  color: #9bffb0;
+}
+
+.admin-restock-button:hover {
+  background: #1b3a22;
+}
+
 .admin-delete-button {
   border-color: #6f2b2b;
   color: #ff9b9b;

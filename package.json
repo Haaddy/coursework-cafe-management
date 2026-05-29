@@ -1,0 +1,10 @@
+{
+  "name": "coursework-cafe-management",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm start --prefix backend\" \"npm run dev --prefix varka-react\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

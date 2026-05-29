@@ -330,12 +330,6 @@ function AdminMenuPage() {
         <button type="button" className="button button--accent" onClick={openCreateModal}>
           Добавить позицию
         </button>
-        <button type="button" className="button button--secondary">
-          Категории
-        </button>
-        <button type="button" className="button button--secondary">
-          Стоп-лист
-        </button>
       </div>
 
       {loading && <p className="loading">Loading...</p>}

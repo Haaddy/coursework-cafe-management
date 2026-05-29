@@ -29,14 +29,16 @@ function Menu(props)  {
           <div className="menu__list" id="menuList">
            
            {fillteredCategory.map((product) => (
-            <ProductCard 
+            <ProductCard
                 key={product.id}
                 id={product.id}
                 name={product.name}
                 price={product.price}
                 isVolumes={product.isVolumes}
-                onAdd = {addToCart}
-                
+                available={product.available}
+                volumeAvailability={product.volumeAvailability}
+                stockMessage={product.stockMessage}
+                onAdd={addToCart}
             />
            ))}
 
