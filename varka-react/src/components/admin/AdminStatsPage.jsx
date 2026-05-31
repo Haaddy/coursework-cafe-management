@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
 import { adminFetch } from "../../utils/adminApi";
 
-function formatLocalYmd(date) {
+function formatLocalYmd(date) { // ! дата в формате YYYY-MM-DD
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
-function defaultDateRange() {
+function defaultDateRange() { // ! диапазон дат по умолчанию (текущий месяц)
   const to = new Date();
   const from = new Date(to.getFullYear(), to.getMonth(), 1);
   return { from: formatLocalYmd(from), to: formatLocalYmd(to) };
@@ -22,34 +22,34 @@ const moneyFormatter = new Intl.NumberFormat("ru-BY", {
   maximumFractionDigits: 2,
 });
 
-function formatMoney(value) {
+function formatMoney(value) { // ! формат суммы в BYN
   if (value == null || Number.isNaN(value)) {
     return "—";
   }
   return moneyFormatter.format(value);
 }
 
-function groupByLabel(groupBy) {
+function groupByLabel(groupBy) { // ! подпись группировки периода
   if (groupBy === "day") return "По дням";
   if (groupBy === "week") return "По неделям";
   if (groupBy === "month") return "По месяцам";
   return "";
 }
 
-function AdminStatsPage() {
-  const [{ from, to }, setRange] = useState(defaultDateRange);
-  const [groupBy, setGroupBy] = useState("day");
-  const [summary, setSummary] = useState(null);
-  const [buckets, setBuckets] = useState(null);
-  const [topProducts, setTopProducts] = useState(null);
-  const [peakHour, setPeakHour] = useState(null);
-  const [salesByHour, setSalesByHour] = useState(null);
-  const [resolvedGroupBy, setResolvedGroupBy] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [legacyApi, setLegacyApi] = useState(false);
+function AdminStatsPage() { // ! страница статистики продаж
+  const [{ from, to }, setRange] = useState(defaultDateRange); // ! период отчёта
+  const [groupBy, setGroupBy] = useState("day"); // ! группировка (день/неделя/месяц)
+  const [summary, setSummary] = useState(null); // ! сводные метрики
+  const [buckets, setBuckets] = useState(null); // ! данные по периодам
+  const [topProducts, setTopProducts] = useState(null); // ! топ товаров
+  const [peakHour, setPeakHour] = useState(null); // ! час пик
+  const [salesByHour, setSalesByHour] = useState(null); // ! продажи по часам
+  const [resolvedGroupBy, setResolvedGroupBy] = useState(null); // ! фактическая группировка с сервера
+  const [isLoading, setIsLoading] = useState(false); // ! загрузка статистики
+  const [error, setError] = useState(""); // ! ошибка загрузки
+  const [legacyApi, setLegacyApi] = useState(false); // ! старый формат API без расширенной статистики
 
-  const loadStats = useCallback(() => {
+  const loadStats = useCallback(() => { // ! загрузка аналитики заказов
     if (!from || !to) {
       setError("Укажите даты «От» и «До»");
       return;
@@ -64,13 +64,14 @@ function AdminStatsPage() {
     setError("");
 
     adminFetch(`/analytics/orders?${params.toString()}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || `Ошибка ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().catch(() => ({})).then((data) => {
+          if (!res.ok) {
+            throw new Error(data.error || `Ошибка ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then((data) => {
         const hasExtendedStats =
           Array.isArray(data.topProducts) && Array.isArray(data.salesByHour);
@@ -95,7 +96,7 @@ function AdminStatsPage() {
       .finally(() => setIsLoading(false));
   }, [from, to, groupBy]);
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка статистики при смене фильтров
     loadStats();
   }, [loadStats]);
 

@@ -2,16 +2,16 @@ import CategoryButtons from "./CategoryButtons";
 import ProductCard from "./ProductCard";
 
 
-function Menu(props)  {
+function Menu(props)  { // ! блок меню с фильтром категорий
 
     const {
-        addToCart,
-        activeCategory,
-        onCategoryChange,
-        menu,
+        addToCart, // ! добавление в корзину
+        activeCategory, // ! активная категория
+        onCategoryChange, // ! смена категории
+        menu, // ! список позиций меню
     } =props
 
-    const fillteredCategory = activeCategory 
+    const fillteredCategory = activeCategory  // ! фильтрация категорий
     ?menu.filter((product )=> product.category === activeCategory) 
     : menu
 

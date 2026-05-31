@@ -2,16 +2,16 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../auth/AdminAuthContext";
 
-function AdminLoginPage() {
+function AdminLoginPage() { // ! страница входа в админку
   const navigate = useNavigate();
   const { login } = useAdminAuth();
 
-  const [personalCode, setPersonalCode] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [personalCode, setPersonalCode] = useState(""); // ! код сотрудника
+  const [password, setPassword] = useState(""); // ! пароль
+  const [error, setError] = useState(""); // ! ошибка входа
+  const [isSubmitting, setIsSubmitting] = useState(false); // ! отправка формы
 
-  const onSubmit = async (event) => {
+  const onSubmit = (event) => { // ! отправка формы входа
     event.preventDefault();
     setError("");
     const normalizedCode = personalCode.trim();
@@ -21,14 +21,10 @@ function AdminLoginPage() {
     }
 
     setIsSubmitting(true);
-    try {
-      await login(normalizedCode, password);
-      navigate("/admin", { replace: true });
-    } catch (err) {
-      setError(err.message || "Не удалось войти");
-    } finally {
-      setIsSubmitting(false);
-    }
+    login(normalizedCode, password)
+      .then(() => navigate("/admin", { replace: true }))
+      .catch((err) => setError(err.message || "Не удалось войти"))
+      .finally(() => setIsSubmitting(false));
   };
 
   return (

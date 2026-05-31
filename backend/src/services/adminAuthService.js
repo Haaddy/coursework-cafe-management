@@ -1,11 +1,11 @@
 const crypto = require("crypto");
 const { get, initializeDatabase } = require("../data/database");
 
-const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12h
-const OWNER_SESSION_ID = 0;
-const sessions = new Map();
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // ! время жизни сессии
+const OWNER_SESSION_ID = 0; // ! ID сессии владельца
+const sessions = new Map(); // ! масса сессий
 
-function getOwnerEnv() {
+function getOwnerEnv() { // ! функция получения данных владельца
   return {
     login: String(process.env.ADMIN_OWNER_LOGIN || "").trim(),
     password: String(process.env.ADMIN_OWNER_PASSWORD || ""),
@@ -13,43 +13,43 @@ function getOwnerEnv() {
   };
 }
 
-function isOwnerConfigured() {
-  const { login, password } = getOwnerEnv();
-  return Boolean(login && password);
+function isOwnerConfigured() { // ! функция проверки настроек владельца
+  const { login, password } = getOwnerEnv(); // ! получение данных владельца
+  return Boolean(login && password); // ! возвращение true если настройки владельца установлены
 }
 
-function isOwnerCredentials(personalCode, password) {
+function isOwnerCredentials(personalCode, password) { // ! функция проверки credentials владельца
   if (!isOwnerConfigured()) return false;
-  const { login, password: ownerPassword } = getOwnerEnv();
-  return personalCode === login && password === ownerPassword;
+  const { login, password: ownerPassword } = getOwnerEnv(); // ! получение данных владельца
+  return personalCode === login && password === ownerPassword; // ! возвращение true если credentials владельца установлены
 }
 
-class AdminAuthError extends Error {
-  constructor(message, statusCode, code) {
+class AdminAuthError extends Error { // ! класс ошибки авторизации
+  constructor(message, statusCode, code) { // ! конструктор класса ошибки авторизации
     super(message);
-    this.name = "AdminAuthError";
-    this.statusCode = statusCode;
-    this.code = code || "ADMIN_AUTH_ERROR";
+    this.name = "AdminAuthError"; // ! имя ошибки
+    this.statusCode = statusCode; // ! статус код ошибки
+    this.code = code || "ADMIN_AUTH_ERROR"; // ! код ошибки
   }
 }
 
-function isManagerPosition(position) {
-  const value = String(position || "").trim().toLowerCase();
-  return value === "manager" || value === "менеджер";
+function isManagerPosition(position) { // ! функция проверки позиции менеджера
+  const value = String(position || "").trim().toLowerCase(); // ! получение позиции менеджера
+  return value === "manager" || value === "менеджер"; // ! возвращение true если позиция менеджера установлена
 }
 
-function isOwnerPosition(position) {
-  const value = String(position || "").trim().toLowerCase();
-  return value === "owner" || value === "владелец";
+function isOwnerPosition(position) { // ! функция проверки позиции владельца
+  const value = String(position || "").trim().toLowerCase(); // ! получение позиции владельца
+  return value === "owner" || value === "владелец"; // ! возвращение true если позиция владельца установлена
 }
 
-function canAccessAdmin(position) {
-  return isManagerPosition(position) || isOwnerPosition(position);
+function canAccessAdmin(position) { // ! функция проверки доступа к админке
+  return isManagerPosition(position) || isOwnerPosition(position); // ! возвращение true если доступ к админке установлен
 }
 
-function mapOwner() {
-  const { login, name } = getOwnerEnv();
-  return {
+function mapOwner() { // ! функция преобразования данных владельца
+  const { login, name } = getOwnerEnv(); // ! получение данных владельца
+  return { // ! возвращение данных владельца
     id: OWNER_SESSION_ID,
     fullName: name,
     position: "owner",
@@ -58,7 +58,7 @@ function mapOwner() {
   };
 }
 
-function mapManager(row) {
+function mapManager(row) { // ! функция преобразования данных менеджера
   return {
     id: row.id,
     fullName: row.full_name,
@@ -68,102 +68,102 @@ function mapManager(row) {
   };
 }
 
-function createSession({ employeeId, isOwner = false }) {
-  const token = crypto.randomBytes(32).toString("hex");
-  sessions.set(token, {
+function createSession({ employeeId, isOwner = false }) { // ! функция создания сессии  
+  const token = crypto.randomBytes(32).toString("hex"); // ! получение токена
+  sessions.set(token, { // ! добавление сессии в массу сессий
     employeeId: isOwner ? OWNER_SESSION_ID : employeeId,
-    isOwner: Boolean(isOwner),
-    expiresAt: Date.now() + SESSION_TTL_MS,
+    isOwner: Boolean(isOwner), // ! возвращение true если сессия владельца
+    expiresAt: Date.now() + SESSION_TTL_MS, // ! получение времени истечения сессии
   });
-  return token;
+  return token; // ! возвращение токена
 }
 
-function clearSession(token) {
+function clearSession(token) { // ! функция удаления сессии
   sessions.delete(String(token || ""));
 }
 
-function getSession(token) {
-  const normalizedToken = String(token || "");
-  const session = sessions.get(normalizedToken);
+function getSession(token) { // ! функция получения сессии
+  const normalizedToken = String(token || ""); // ! получение токена
+  const session = sessions.get(normalizedToken); // ! получение сессии из массы сессий
   if (!session) return null;
-  if (session.expiresAt < Date.now()) {
+  if (session.expiresAt < Date.now()) { // ! если время истечения сессии меньше текущего времени
     sessions.delete(normalizedToken);
-    return null;
+    return null; // ! возвращение null если сессия не найдена
   }
-  return session;
+  return session; // ! возвращение сессии
 }
 
-async function getManagerByPersonalCode(personalCode) {
+async function getManagerByPersonalCode(personalCode) { // ! функция получения менеджера по personal_code
   const row = await get(
     `SELECT id, full_name, position, status, personal_code
      FROM employees
      WHERE personal_code = ?`,
     [personalCode]
   );
-  if (!row) {
+  if (!row) { // ! если менеджер не найден
     throw new AdminAuthError("Invalid personal code or password", 401, "ADMIN_INVALID_CREDENTIALS");
   }
   if (row.status !== "active") {
-    throw new AdminAuthError("Manager is not active", 403, "ADMIN_INACTIVE");
+    throw new AdminAuthError("Manager is not active", 403, "ADMIN_INACTIVE"); // ! если менеджер не активен
   }
   if (!isManagerPosition(row.position)) {
-    throw new AdminAuthError("Only managers can access admin panel", 403, "ADMIN_ROLE_DENIED");
+    throw new AdminAuthError("Only managers can access admin panel", 403, "ADMIN_ROLE_DENIED"); // ! если менеджер не имеет доступа к админке
   }
-  return row;
+  return row; // ! возвращение менеджера
 }
 
-async function loginManager(personalCode, password) {
+async function loginManager(personalCode, password) { // ! функция входа в админку
   await initializeDatabase();
-  const normalizedCode = String(personalCode || "").trim();
-  const normalizedPassword = String(password || "");
+  const normalizedCode = String(personalCode || "").trim(); // ! получение токена
+  const normalizedPassword = String(password || ""); // ! получение пароля
   if (!normalizedCode || !normalizedPassword) {
-    throw new AdminAuthError("personalCode and password are required", 400, "ADMIN_CREDENTIALS_REQUIRED");
+    throw new AdminAuthError("personalCode and password are required", 400, "ADMIN_CREDENTIALS_REQUIRED"); // ! если токен или пароль не установлены
   }
 
-  if (isOwnerCredentials(normalizedCode, normalizedPassword)) {
-    const token = createSession({ isOwner: true });
+  if (isOwnerCredentials(normalizedCode, normalizedPassword)) { // ! если credentials владельца установлены
+    const token = createSession({ isOwner: true }); // ! создание сессии владельца
     return {
       token,
-      manager: mapOwner(),
+      manager: mapOwner(), // ! возвращение данных владельца
     };
   }
 
-  const adminPassword = String(process.env.ADMIN_PASSWORD || "");
+  const adminPassword = String(process.env.ADMIN_PASSWORD || ""); // ! получение пароля администратора
   if (!adminPassword) {
-    throw new AdminAuthError("ADMIN_PASSWORD is not configured", 500, "ADMIN_PASSWORD_NOT_CONFIGURED");
+    throw new AdminAuthError("ADMIN_PASSWORD is not configured", 500, "ADMIN_PASSWORD_NOT_CONFIGURED"); // ! если пароль администратора не установлен
   }
   if (normalizedPassword !== adminPassword) {
-    throw new AdminAuthError("Invalid personal code or password", 401, "ADMIN_INVALID_CREDENTIALS");
+    throw new AdminAuthError("Invalid personal code or password", 401, "ADMIN_INVALID_CREDENTIALS"); // ! если пароль администратора не совпадает
   }
 
-  const managerRow = await getManagerByPersonalCode(normalizedCode);
-  const token = createSession({ employeeId: managerRow.id });
-  return {
+  const managerRow = await getManagerByPersonalCode(normalizedCode); // ! получение менеджера по personal_code
+  const token = createSession({ employeeId: managerRow.id }); // ! создание сессии менеджера
+  return { // ! возвращение данных менеджера
     token,
-    manager: mapManager(managerRow),
+    manager: mapManager(managerRow), 
   };
 }
 
-async function getManagerByToken(token) {
+async function getManagerByToken(token) { // ! функция получения менеджера по токену
   await initializeDatabase();
-  const session = getSession(token);
-  if (!session) return null;
+  const session = getSession(token); // ! получение сессии из массы сессий
+  if (!session) return null; // ! возвращение null если сессия не найдена
 
   if (session.isOwner) {
-    return isOwnerConfigured() ? mapOwner() : null;
+    return isOwnerConfigured() ? mapOwner() : null; // ! возвращение данных владельца
   }
 
-  const row = await get(
+  const row = await get( // ! получение менеджера по ID
     `SELECT id, full_name, position, status, personal_code
      FROM employees
      WHERE id = ?`,
     [session.employeeId]
   );
-  if (!row || row.status !== "active" || !canAccessAdmin(row.position)) {
+  if (!row || row.status !== "active" || !canAccessAdmin(row.position)) { // ! если менеджер не найден или не активен или не имеет доступа к админке
     clearSession(token);
-    return null;
+    return null; // ! возвращение null если менеджер не найден или не активен или не имеет доступа к админке
   }
-  return mapManager(row);
+  return mapManager(row); // ! возвращение данных менеджера
 }
 
 module.exports = {

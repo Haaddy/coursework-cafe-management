@@ -1,13 +1,13 @@
-function OrderModal(props) {
+function OrderModal(props) { // ! модальное окно подтверждения заказа
 
   const {
-    modalState,
-    onSubmitOrder,
-    onClose,
-    orderError = "",
+    modalState, // ! открыто ли окно
+    onSubmitOrder, // ! отправка заказа
+    onClose, // ! закрытие окна
+    orderError = "", // ! текст ошибки
   } = props;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e) => { // ! обработка формы
     e.preventDefault()
     onSubmitOrder()
   }

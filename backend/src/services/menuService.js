@@ -20,31 +20,31 @@ const RECIPE_STOCK_SQL = `SELECT mi.inventory_item_id, mi.qty_per_unit, s.quanti
              )
            )`;
 
-async function getRecipeStockRows(menuId, volume) {
+async function getRecipeStockRows(menuId, volume) { // ! функция получения строк рецептов
     return all(RECIPE_STOCK_SQL, [menuId, volume, volume]);
-}
+} // ! возвращение строк рецептов
 
-function buildStockMessage(missingIngredients) {
-    if (!missingIngredients.length) {
+function buildStockMessage(missingIngredients) { // ! функция построения сообщения о недостаточности ингредиентов
+    if (!missingIngredients.length) { // ! если недостаточно ингредиентов
         return null;
     }
-    if (missingIngredients.length === 1) {
+    if (missingIngredients.length === 1) { // ! если недостаточно одного ингредиента
         return `Закончился ингредиент: ${missingIngredients[0].name}`;
     }
-    return "Недостаточно ингредиентов";
+    return "Недостаточно ингредиентов"; // ! возвращение сообщения о недостаточности ингредиентов
 }
 
-function evaluateRecipeAvailability(recipeRows) {
-    if (!recipeRows.length) {
+function evaluateRecipeAvailability(recipeRows) { // ! функция оценки доступности рецепта
+    if (!recipeRows.length) { // ! если рецепт не найден
         return { available: true, missingIngredients: [], stockMessage: null };
     }
 
-    const missingIngredients = [];
+    const missingIngredients = []; // ! создание массива недостающих ингредиентов
     for (const row of recipeRows) {
-        const requiredQty = Number(row.qty_per_unit);
-        const currentQty = Number(row.quantity || 0);
-        if (currentQty < requiredQty) {
-            missingIngredients.push({
+        const requiredQty = Number(row.qty_per_unit); // ! получение необходимого количества ингредиента
+        const currentQty = Number(row.quantity || 0); // ! получение текущего количества ингредиента
+        if (currentQty < requiredQty) { // ! если текущее количество ингредиента меньше необходимого
+            missingIngredients.push({ // ! добавление недостающего ингредиента в массив
                 inventoryItemId: row.inventory_item_id,
                 name: row.inventory_item_name,
                 requiredQty,
@@ -53,58 +53,58 @@ function evaluateRecipeAvailability(recipeRows) {
         }
     }
 
-    return {
-        available: missingIngredients.length === 0,
-        missingIngredients,
-        stockMessage: buildStockMessage(missingIngredients),
+    return { // ! возвращение оценки доступности рецепта
+        available: missingIngredients.length === 0, // ! если недостающих ингредиентов нет
+        missingIngredients, // ! недостающие ингредиенты
+        stockMessage: buildStockMessage(missingIngredients), // ! сообщение о недостаточности ингредиентов
     };
 }
 
-async function getMenuItemAvailability(menuId, isVolumes, price) {
-    if (!isVolumes) {
+async function getMenuItemAvailability(menuId, isVolumes, price) { // ! функция получения доступности товара
+    if (!isVolumes) { // ! если товар не имеет объемов
         const recipeRows = await getRecipeStockRows(menuId, null);
-        const availability = evaluateRecipeAvailability(recipeRows);
-        return {
-            available: availability.available,
-            volumeAvailability: null,
-            stockMessage: availability.stockMessage,
+        const availability = evaluateRecipeAvailability(recipeRows); // ! оценка доступности рецепта
+        return { // ! возвращение доступности товара
+            available: availability.available, // ! доступность товара
+            volumeAvailability: null, // ! доступность товара по объемам
+            stockMessage: availability.stockMessage, // ! сообщение о недостаточности ингредиентов
         };
     }
 
-    const volumeKeys =
+    const volumeKeys = // ! получение ключей объемов
         typeof price === "object" && price !== null ? Object.keys(price) : ["250", "350", "500"];
-    const volumeAvailability = {};
-    let anyAvailable = false;
+    const volumeAvailability = {}; // ! создание массива доступности товара по объемам
+    let anyAvailable = false; // ! флаг доступности товара
 
-    for (const volume of volumeKeys) {
-        const recipeRows = await getRecipeStockRows(menuId, volume);
-        const availability = evaluateRecipeAvailability(recipeRows);
-        volumeAvailability[volume] = availability.available;
+    for (const volume of volumeKeys) { // ! цикл по объемам
+        const recipeRows = await getRecipeStockRows(menuId, volume); // ! получение строк рецептов
+        const availability = evaluateRecipeAvailability(recipeRows); // ! оценка доступности рецепта
+        volumeAvailability[volume] = availability.available; // ! добавление доступности товара по объему в массив
         if (availability.available) {
-            anyAvailable = true;
+            anyAvailable = true; // ! флаг доступности товара
         }
     }
 
-    return {
-        available: anyAvailable,
-        volumeAvailability,
-        stockMessage: anyAvailable ? null : "Недостаточно ингредиентов для всех объёмов",
+    return { // ! возвращение доступности товара
+        available: anyAvailable, // ! доступность товара
+        volumeAvailability, // ! доступность товара по объемам
+        stockMessage: anyAvailable ? null : "Недостаточно ингредиентов для всех объёмов", // ! сообщение о недостаточности ингредиентов
     };
 }
 
-async function getMenu(){
+async function getMenu(){ // ! функция получения меню
     await initializeDatabase();
-    const rows = await all(
+    const rows = await all( // ! получение строк меню
         "SELECT id, name, category, is_volumes, price_json FROM menu ORDER BY id ASC"
     );
 
-    const menu = [];
+    const menu = []; // ! создание массива меню
     for (const row of rows) {
-        const price = JSON.parse(row.price_json);
-        const isVolumes = Boolean(row.is_volumes);
-        const availability = await getMenuItemAvailability(row.id, isVolumes, price);
+        const price = JSON.parse(row.price_json); // ! получение цены товара
+        const isVolumes = Boolean(row.is_volumes); // ! проверка на наличие объемов
+        const availability = await getMenuItemAvailability(row.id, isVolumes, price); // ! получение доступности товара
 
-        menu.push({
+        menu.push({ // ! добавление товара в массив меню
             id: row.id,
             name: row.name,
             category: row.category,
@@ -116,12 +116,12 @@ async function getMenu(){
         });
     }
 
-    return menu;
+    return menu; // ! возвращение меню
 }
 
-async function createMenuItem(itemData) {
+async function createMenuItem(itemData) { // ! функция создания товара
     await initializeDatabase();
-    const insert = await run(
+    const insert = await run( // ! создание товара
         "INSERT INTO menu (name, category, is_volumes, price_json) VALUES (?, ?, ?, ?)",
         [
             itemData.name,
@@ -131,7 +131,7 @@ async function createMenuItem(itemData) {
         ]
     );
 
-    return {
+    return { // ! возвращение товара
         id: insert.lastID,
         name: itemData.name,
         category: itemData.category,
@@ -140,13 +140,13 @@ async function createMenuItem(itemData) {
     };
 }
 
-async function updateMenuItem(id, itemData) {
+async function updateMenuItem(id, itemData) { // ! функция обновления товара
     await initializeDatabase();
-    const existing = await get("SELECT id FROM menu WHERE id = ?", [id]);
+    const existing = await get("SELECT id FROM menu WHERE id = ?", [id]); // ! получение товара
     if (!existing) {
         throw new Error("Menu item not found");
     }
-    await run(
+    await run( // ! обновление товара
         "UPDATE menu SET name = ?, category = ?, is_volumes = ?, price_json = ? WHERE id = ?",
         [
             itemData.name,
@@ -157,7 +157,7 @@ async function updateMenuItem(id, itemData) {
         ]
     );
 
-    return {
+    return { // ! возвращение товара
         id: Number(id),
         name: itemData.name,
         category: itemData.category,
@@ -166,18 +166,18 @@ async function updateMenuItem(id, itemData) {
     };
 }
 
-async function deleteMenuItem(id) {
+async function deleteMenuItem(id) { // ! функция удаления товара
     await initializeDatabase();
-    const existing = await get(
+    const existing = await get( // ! получение товара
         "SELECT id, name, category, is_volumes, price_json FROM menu WHERE id = ?",
         [id]
     );
-    if (!existing) {
+    if (!existing) { // ! если товар не найден
         throw new Error("Menu item not found");
     }
-    await run("DELETE FROM menu WHERE id = ?", [id]);
+    await run("DELETE FROM menu WHERE id = ?", [id]); // ! удаление товара
 
-    return {
+    return { // ! возвращение товара
         id: existing.id,
         name: existing.name,
         category: existing.category,
@@ -186,15 +186,15 @@ async function deleteMenuItem(id) {
     };
 }
 
-async function getMenuIngredients(menuId) {
+async function getMenuIngredients(menuId) { // ! функция получения ингредиентов товара
     await initializeDatabase();
 
-    const menu = await get("SELECT id FROM menu WHERE id = ?", [menuId]);
-    if (!menu) {
+    const menu = await get("SELECT id FROM menu WHERE id = ?", [menuId]); // ! получение товара
+    if (!menu) { // ! если товар не найден
         throw new Error("Menu item not found");
     }
 
-    const rows = await all(
+    const rows = await all( // ! получение строк ингредиентов
         `SELECT mi.id, mi.menu_id, mi.inventory_item_id, mi.qty_per_unit, mi.volume, mi.created_at,
                 i.name AS inventory_item_name, i.unit AS inventory_item_unit
          FROM menu_ingredients mi
@@ -204,7 +204,7 @@ async function getMenuIngredients(menuId) {
         [menuId]
     );
 
-    return rows.map((row) => ({
+    return rows.map((row) => ({ // ! возвращение ингредиентов
         id: row.id,
         menuId: row.menu_id,
         inventoryItemId: row.inventory_item_id,
@@ -216,55 +216,55 @@ async function getMenuIngredients(menuId) {
     }));
 }
 
-async function replaceMenuIngredients(menuId, ingredients) {
+async function replaceMenuIngredients(menuId, ingredients) { // ! функция замены ингредиентов товара
     await initializeDatabase();
 
-    const menu = await get("SELECT id FROM menu WHERE id = ?", [menuId]);
-    if (!menu) {
+    const menu = await get("SELECT id FROM menu WHERE id = ?", [menuId]); // ! получение товара
+    if (!menu) { // ! если товар не найден
         throw new Error("Menu item not found");
     }
 
-    try {
-        await run("BEGIN TRANSACTION");
-        await run("DELETE FROM menu_ingredients WHERE menu_id = ?", [menuId]);
+    try { // ! начало транзакции    
+        await run("BEGIN TRANSACTION"); 
+        await run("DELETE FROM menu_ingredients WHERE menu_id = ?", [menuId]); // ! удаление ингредиентов товара
 
-        const createdAt = new Date().toISOString();
-        for (const ingredient of ingredients) {
-            const inventoryItemId = Number(ingredient.inventoryItemId);
-            const qtyPerUnit = Number(ingredient.qtyPerUnit);
-            const volume = ingredient.volume == null || ingredient.volume === ""
+        const createdAt = new Date().toISOString(); // ! получение даты создания
+        for (const ingredient of ingredients) { // ! цикл по ингредиентам
+            const inventoryItemId = Number(ingredient.inventoryItemId); // ! получение ID ингредиента
+            const qtyPerUnit = Number(ingredient.qtyPerUnit); // ! получение количества ингредиента
+            const volume = ingredient.volume == null || ingredient.volume === "" // ! получение объема ингредиента
                 ? null
-                : String(ingredient.volume);
+                : String(ingredient.volume); 
 
-            const inventoryItem = await get("SELECT id FROM inventory_items WHERE id = ?", [inventoryItemId]);
-            if (!inventoryItem) {
-                throw new Error(`Inventory item not found: ${inventoryItemId}`);
+            const inventoryItem = await get("SELECT id FROM inventory_items WHERE id = ?", [inventoryItemId]); // ! получение ингредиента
+            if (!inventoryItem) { // ! если ингредиент не найден
+                throw new Error(`Inventory item not found: ${inventoryItemId}`); 
             }
-            if (!Number.isFinite(qtyPerUnit) || qtyPerUnit <= 0) {
+            if (!Number.isFinite(qtyPerUnit) || qtyPerUnit <= 0) { // ! если количество ингредиента не является положительным числом
                 throw new Error("qtyPerUnit must be a positive number");
             }
 
-            await run(
+            await run( // ! добавление ингредиента в базу данных
                 `INSERT INTO menu_ingredients (menu_id, inventory_item_id, qty_per_unit, volume, created_at)
                  VALUES (?, ?, ?, ?, ?)`,
                 [menuId, inventoryItemId, qtyPerUnit, volume, createdAt]
             );
         }
 
-        await run("COMMIT");
+        await run("COMMIT"); // ! завершение транзакции
     } catch (error) {
         await run("ROLLBACK");
         throw error;
     }
 
-    return getMenuIngredients(menuId);
+    return getMenuIngredients(menuId); // ! возвращение ингредиентов товара
 }
 
-module.exports = {
-    getMenu,
-    createMenuItem,
-    updateMenuItem,
-    deleteMenuItem,
-    getMenuIngredients,
-    replaceMenuIngredients,
+module.exports = { // ! экспорт функций
+    getMenu, // ! функция получения меню
+    createMenuItem, // ! функция создания товара
+    updateMenuItem, // ! функция обновления товара
+    deleteMenuItem, // ! функция удаления товара
+    getMenuIngredients, // ! функция получения ингредиентов товара
+    replaceMenuIngredients, // ! функция замены ингредиентов товара
 };

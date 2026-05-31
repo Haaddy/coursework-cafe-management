@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
 import { adminFetch } from "../../utils/adminApi";
 
-function createEmptyRow() {
+function createEmptyRow() { // ! пустая строка рецепта
   return {
     inventoryItemId: "",
     qtyPerUnit: "",
@@ -10,17 +10,17 @@ function createEmptyRow() {
   };
 }
 
-function AdminRecipesPage() {
-  const [menuItems, setMenuItems] = useState([]);
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [selectedMenuId, setSelectedMenuId] = useState("");
-  const [recipeRows, setRecipeRows] = useState([createEmptyRow()]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+function AdminRecipesPage() { // ! страница рецептов (товар — ингредиенты)
+  const [menuItems, setMenuItems] = useState([]); // ! позиции меню
+  const [inventoryItems, setInventoryItems] = useState([]); // ! позиции склада
+  const [selectedMenuId, setSelectedMenuId] = useState(""); // ! выбранный товар
+  const [recipeRows, setRecipeRows] = useState([createEmptyRow()]); // ! строки рецепта
+  const [isLoading, setIsLoading] = useState(false); // ! загрузка данных
+  const [isSaving, setIsSaving] = useState(false); // ! сохранение рецепта
+  const [error, setError] = useState(""); // ! ошибка
+  const [successMessage, setSuccessMessage] = useState(""); // ! сообщение об успехе
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка меню и склада при монтировании
     setIsLoading(true);
     Promise.all([
       adminFetch("/menu").then((res) => {
@@ -41,7 +41,7 @@ function AdminRecipesPage() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const onSelectMenuItem = (event) => {
+  const onSelectMenuItem = (event) => { // ! выбор товара и загрузка его рецепта
     const menuId = event.target.value;
     setSelectedMenuId(menuId);
     setSuccessMessage("");
@@ -76,24 +76,24 @@ function AdminRecipesPage() {
       .finally(() => setIsLoading(false));
   };
 
-  const onChangeRow = (index, field, value) => {
+  const onChangeRow = (index, field, value) => { // ! изменение поля строки рецепта
     setRecipeRows((prev) =>
       prev.map((row, rowIndex) => (rowIndex === index ? { ...row, [field]: value } : row))
     );
   };
 
-  const addRow = () => {
+  const addRow = () => { // ! добавить строку рецепта
     setRecipeRows((prev) => [...prev, createEmptyRow()]);
   };
 
-  const removeRow = (index) => {
+  const removeRow = (index) => { // ! удалить строку рецепта
     setRecipeRows((prev) => {
       if (prev.length === 1) return [createEmptyRow()];
       return prev.filter((_, rowIndex) => rowIndex !== index);
     });
   };
 
-  const onSaveRecipe = () => {
+  const onSaveRecipe = () => { // ! сохранение рецепта на сервер
     if (!selectedMenuId) {
       setError("Сначала выберите товар меню");
       return;
@@ -123,11 +123,12 @@ function AdminRecipesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ingredients: cleaned }),
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data?.error || "Не удалось сохранить рецепт");
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) throw new Error(data?.error || "Не удалось сохранить рецепт");
+          return data;
+        })
+      )
       .then(() => setSuccessMessage("Рецепт сохранен"))
       .catch((err) => setError(err.message || "Ошибка сохранения"))
       .finally(() => setIsSaving(false));

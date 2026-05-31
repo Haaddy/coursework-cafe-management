@@ -2,14 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
 import { adminFetch } from "../../utils/adminApi";
 
-function formatLocalYmd(date) {
+function formatLocalYmd(date) { // ! дата в формате YYYY-MM-DD
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
-function defaultDateRange() {
+function defaultDateRange() { // ! диапазон дат по умолчанию (текущий месяц)
   const to = new Date();
   const from = new Date(to.getFullYear(), to.getMonth(), 1);
   return { from: formatLocalYmd(from), to: formatLocalYmd(to) };
@@ -22,7 +22,7 @@ const moneyFormatter = new Intl.NumberFormat("ru-BY", {
   maximumFractionDigits: 2,
 });
 
-function formatMoney(value) {
+function formatMoney(value) { // ! формат суммы в BYN
   if (value == null || Number.isNaN(value)) {
     return "—";
   }
@@ -35,24 +35,24 @@ const STATUS_OPTIONS = [
   { value: "dismissed", label: "Уволен" },
 ];
 
-function AdminEmployeesPage() {
-  const [employees, setEmployees] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+function AdminEmployeesPage() { // ! страница сотрудников и их статистики
+  const [employees, setEmployees] = useState([]); // ! список сотрудников
+  const [isLoading, setIsLoading] = useState(false); // ! загрузка / сохранение
+  const [error, setError] = useState(""); // ! ошибка операции
+  const [searchQuery, setSearchQuery] = useState(""); // ! поиск по сотрудникам
 
-  const [fullName, setFullName] = useState("");
-  const [position, setPosition] = useState("");
-  const [status, setStatus] = useState("active");
-  const [personalCode, setPersonalCode] = useState("");
+  const [fullName, setFullName] = useState(""); // ! ФИО нового сотрудника
+  const [position, setPosition] = useState(""); // ! должность
+  const [status, setStatus] = useState("active"); // ! статус
+  const [personalCode, setPersonalCode] = useState(""); // ! личный код
 
-  const [{ from: statsFrom, to: statsTo }, setStatsRange] = useState(defaultDateRange);
-  const [employeeStats, setEmployeeStats] = useState(null);
-  const [topEmployees, setTopEmployees] = useState(null);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [statsError, setStatsError] = useState("");
+  const [{ from: statsFrom, to: statsTo }, setStatsRange] = useState(defaultDateRange); // ! период статистики
+  const [employeeStats, setEmployeeStats] = useState(null); // ! сводка по сотрудникам
+  const [topEmployees, setTopEmployees] = useState(null); // ! топ сотрудников
+  const [statsLoading, setStatsLoading] = useState(false); // ! загрузка статистики
+  const [statsError, setStatsError] = useState(""); // ! ошибка статистики
 
-  const loadEmployeeStats = useCallback(() => {
+  const loadEmployeeStats = useCallback(() => { // ! загрузка аналитики по сотрудникам
     if (!statsFrom || !statsTo) {
       setStatsError("Укажите даты «От» и «До»");
       return;
@@ -63,13 +63,14 @@ function AdminEmployeesPage() {
     setStatsError("");
 
     adminFetch(`/analytics/employees?${params.toString()}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || `Ошибка ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().catch(() => ({})).then((data) => {
+          if (!res.ok) {
+            throw new Error(data.error || `Ошибка ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then((data) => {
         setEmployeeStats(data.summary || null);
         setTopEmployees(Array.isArray(data.topEmployees) ? data.topEmployees : null);
@@ -82,16 +83,17 @@ function AdminEmployeesPage() {
       .finally(() => setStatsLoading(false));
   }, [statsFrom, statsTo]);
 
-  const loadEmployees = () => {
+  const loadEmployees = () => { // ! загрузка списка сотрудников
     setIsLoading(true);
     adminFetch("/employees")
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || `Ошибка загрузки: ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || `Ошибка загрузки: ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then((data) => {
         setEmployees(Array.isArray(data) ? data : []);
         setError("");
@@ -100,15 +102,15 @@ function AdminEmployeesPage() {
       .finally(() => setIsLoading(false));
   };
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка сотрудников при монтировании
     loadEmployees();
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { // ! перезагрузка статистики при смене периода
     loadEmployeeStats();
   }, [loadEmployeeStats]);
 
-  const filteredEmployees = useMemo(() => {
+  const filteredEmployees = useMemo(() => { // ! отфильтрованный список сотрудников
     const q = searchQuery.trim().toLowerCase();
     if (!q) return employees;
 
@@ -124,7 +126,7 @@ function AdminEmployeesPage() {
     });
   }, [employees, searchQuery]);
 
-  const handleCreateEmployee = () => {
+  const handleCreateEmployee = () => { // ! создание сотрудника
     const normalizedFullName = fullName.trim();
     const normalizedPosition = position.trim();
     const normalizedCode = personalCode.trim();
@@ -156,13 +158,14 @@ function AdminEmployeesPage() {
         personalCode: normalizedCode,
       }),
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || `Ошибка создания: ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || `Ошибка создания: ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then(() => {
         setFullName("");
         setPosition("");
@@ -176,7 +179,7 @@ function AdminEmployeesPage() {
       });
   };
 
-  const handleStatusChange = (employee, nextStatus) => {
+  const handleStatusChange = (employee, nextStatus) => { // ! смена статуса сотрудника
     if (employee.status === nextStatus) return;
 
     setIsLoading(true);
@@ -193,13 +196,14 @@ function AdminEmployeesPage() {
         personalCode: employee.personalCode,
       }),
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || `Ошибка обновления: ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || `Ошибка обновления: ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then(() => loadEmployees())
       .catch((err) => {
         setError(err.message || "Ошибка сети");
@@ -207,7 +211,7 @@ function AdminEmployeesPage() {
       });
   };
 
-  const handleDeleteEmployee = (employee) => {
+  const handleDeleteEmployee = (employee) => { // ! удаление сотрудника
     const isConfirmed = window.confirm(`Удалить сотрудника "${employee.fullName}"?`);
     if (!isConfirmed) return;
 
@@ -216,13 +220,14 @@ function AdminEmployeesPage() {
     adminFetch(`/employees/${employee.id}`, {
       method: "DELETE",
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || `Ошибка удаления: ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || `Ошибка удаления: ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then(() => loadEmployees())
       .catch((err) => {
         setError(err.message || "Ошибка сети");

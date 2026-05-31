@@ -15,7 +15,7 @@ import ProtectedAdminRoute from "./components/admin/ProtectedAdminRoute";
 
 
 
-function App() {
+function App() { // ! корневой компонент с маршрутами
 
   
 

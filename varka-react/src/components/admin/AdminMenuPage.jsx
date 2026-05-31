@@ -3,19 +3,19 @@ import AdminSectionHeader from "./AdminSectionHeader";
 import { useState, useEffect } from "react";
 import { adminFetch } from "../../utils/adminApi";
 
-function AdminMenuPage() {
-  const [menu, setMenu] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editError, setEditError] = useState("");
-  const [editingItemId, setEditingItemId] = useState(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isDeletingId, setIsDeletingId] = useState(null);
-  const [newItem, setNewItem] = useState({
+function AdminMenuPage() { // ! страница управления меню
+  const [menu, setMenu] = useState([]); // ! список позиций меню
+  const [loading, setLoading] = useState(true); // ! загрузка меню
+  const [error, setError] = useState(null); // ! ошибка загрузки
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // ! модалка создания
+  const [createError, setCreateError] = useState(""); // ! ошибка создания
+  const [isSaving, setIsSaving] = useState(false); // ! сохранение новой позиции
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false); // ! модалка редактирования
+  const [editError, setEditError] = useState(""); // ! ошибка редактирования
+  const [editingItemId, setEditingItemId] = useState(null); // ! id редактируемой позиции
+  const [isUpdating, setIsUpdating] = useState(false); // ! обновление позиции
+  const [isDeletingId, setIsDeletingId] = useState(null); // ! id удаляемой позиции
+  const [newItem, setNewItem] = useState({ // ! данные формы create/edit
     name: "",
     category: "coffee",
     isVolumes: false,
@@ -25,7 +25,7 @@ function AdminMenuPage() {
     price500: "",
   });
 
-  const loadMenu = () => {
+  const loadMenu = () => { // ! загрузка меню с сервера
     setLoading(true);
     adminFetch("/menu")
       .then((res) => {
@@ -46,11 +46,11 @@ function AdminMenuPage() {
       });
   };
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка меню при монтировании
     loadMenu();
   }, []);
 
-  const formatPrice = (price) => {
+  const formatPrice = (price) => { // ! формат цены для списка
     if (typeof price === "number") {
       return `${price} BYN`;
     }
@@ -72,7 +72,7 @@ function AdminMenuPage() {
     return "—";
   };
 
-  const formatVolumes = (price) => {
+  const formatVolumes = (price) => { // ! формат объёмов для списка
     if (typeof price !== "object" || price === null) {
       return "";
     }
@@ -89,7 +89,7 @@ function AdminMenuPage() {
     return `${volumes.join("/")} мл`;
   };
 
-  const resetCreateForm = () => {
+  const resetCreateForm = () => { // ! сброс формы создания
     setNewItem({
       name: "",
       category: "coffee",
@@ -102,18 +102,18 @@ function AdminMenuPage() {
     setCreateError("");
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = () => { // ! открыть модалку создания
     resetCreateForm();
     setIsCreateModalOpen(true);
   };
 
-  const closeCreateModal = (force = false) => {
+  const closeCreateModal = (force = false) => { // ! закрыть модалку создания
     if (isSaving && !force) return;
     setIsCreateModalOpen(false);
     setCreateError("");
   };
 
-  const onCreateInputChange = (event) => {
+  const onCreateInputChange = (event) => { // ! изменение поля формы
     const { name, value, type, checked } = event.target;
     setNewItem((prev) => ({
       ...prev,
@@ -121,7 +121,7 @@ function AdminMenuPage() {
     }));
   };
 
-  const fillFormFromItem = (item) => {
+  const fillFormFromItem = (item) => { // ! заполнить форму из позиции меню
     if (item.isVolumes && typeof item.price === "object" && item.price !== null) {
       setNewItem({
         name: item.name || "",
@@ -146,7 +146,7 @@ function AdminMenuPage() {
     });
   };
 
-  const onSubmitCreateItem = (event) => {
+  const onSubmitCreateItem = (event) => { // ! создание позиции меню
     event.preventDefault();
     setCreateError("");
 
@@ -192,13 +192,14 @@ function AdminMenuPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось добавить товар.");
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || "Не удалось добавить товар.");
+          }
+          return data;
+        })
+      )
       .then(() => {
         closeCreateModal(true);
         loadMenu();
@@ -211,21 +212,21 @@ function AdminMenuPage() {
       });
   };
 
-  const openEditModal = (item) => {
+  const openEditModal = (item) => { // ! открыть модалку редактирования
     setEditError("");
     setEditingItemId(item.id);
     fillFormFromItem(item);
     setIsEditModalOpen(true);
   };
 
-  const closeEditModal = (force = false) => {
+  const closeEditModal = (force = false) => { // ! закрыть модалку редактирования
     if (isUpdating && !force) return;
     setIsEditModalOpen(false);
     setEditError("");
     setEditingItemId(null);
   };
 
-  const onSubmitEditItem = (event) => {
+  const onSubmitEditItem = (event) => { // ! сохранение изменений позиции
     event.preventDefault();
     setEditError("");
 
@@ -271,13 +272,14 @@ function AdminMenuPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось обновить товар.");
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || "Не удалось обновить товар.");
+          }
+          return data;
+        })
+      )
       .then(() => {
         closeEditModal(true);
         loadMenu();
@@ -290,7 +292,7 @@ function AdminMenuPage() {
       });
   };
 
-  const onDeleteItem = (item) => {
+  const onDeleteItem = (item) => { // ! удаление позиции меню
     const isConfirmed = window.confirm(`Удалить "${item.name}" из меню?`);
     if (!isConfirmed) {
       return;
@@ -300,13 +302,14 @@ function AdminMenuPage() {
     adminFetch(`/menu/${encodeURIComponent(item.id)}`, {
       method: "DELETE",
     })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) {
-          throw new Error(data?.error || "Не удалось удалить товар.");
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().then((data) => {
+          if (!res.ok) {
+            throw new Error(data?.error || "Не удалось удалить товар.");
+          }
+          return data;
+        })
+      )
       .then(() => {
         loadMenu();
       })

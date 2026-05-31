@@ -44,7 +44,7 @@ const dashboardCards = [
   },
 ];
 
-function AdminDashboardPage() {
+function AdminDashboardPage() { // ! главная страница админ-панели
   return (
     <section className="admin-page admin-dashboard">
       <AdminSectionHeader

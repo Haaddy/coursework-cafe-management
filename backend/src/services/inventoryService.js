@@ -1,7 +1,7 @@
 const { all, get, run, initializeDatabase } = require("../data/database");
 const { parseOptionalDateBounds } = require("../utils/parseDateBounds");
 
-function mapInventoryRow(row) {
+function mapInventoryRow(row) { // ! функция преобразования строки склада в объект
   return {
     id: row.id,
     name: row.name,
@@ -12,7 +12,7 @@ function mapInventoryRow(row) {
   };
 }
 
-async function getInventoryItems() {
+async function getInventoryItems() { // ! функция получения списка товаров на складе
   await initializeDatabase();
   const rows = await all(
     `SELECT i.id, i.name, i.item_type, i.unit, s.quantity, s.updated_at
@@ -21,26 +21,26 @@ async function getInventoryItems() {
      ORDER BY i.name ASC`
   );
 
-  return rows.map(mapInventoryRow);
+  return rows.map(mapInventoryRow); // ! возвращение списка товаров на складе
 }
 
-async function createInventoryItem({ name, itemType, unit, quantity = 0 }) {
+async function createInventoryItem({ name, itemType, unit, quantity = 0 }) { // ! функция создания товара на складе
   await initializeDatabase();
-  const createdAt = new Date().toISOString();
-  const normalizedQty = Number(quantity) || 0;
+  const createdAt = new Date().toISOString(); // ! получение даты создания
+  const normalizedQty = Number(quantity) || 0; // ! получение нормализованного количества
 
-  const insertItem = await run(
+  const insertItem = await run( // ! добавление товара в базу данных
     "INSERT INTO inventory_items (name, item_type, unit, created_at) VALUES (?, ?, ?, ?)",
     [name, itemType, unit || "pcs", createdAt]
   );
 
-  await run(
+  await run( // ! добавление товара в базу данных
     "INSERT INTO inventory_stock (item_id, quantity, updated_at) VALUES (?, ?, ?)",
     [insertItem.lastID, normalizedQty, createdAt]
   );
 
-  if (normalizedQty > 0) {
-    await run(
+  if (normalizedQty > 0) { // ! если количество товара больше 0
+    await run( // ! добавление товара в базу данных
       `INSERT INTO inventory_movements
        (item_id, movement_type, quantity, reason, reference_type, reference_id, created_at)
        VALUES (?, 'in', ?, ?, ?, ?, ?)`,
@@ -48,86 +48,86 @@ async function createInventoryItem({ name, itemType, unit, quantity = 0 }) {
     );
   }
 
-  const row = await get(
+  const row = await get( // ! получение товара
     `SELECT i.id, i.name, i.item_type, i.unit, s.quantity, s.updated_at
      FROM inventory_items i
      JOIN inventory_stock s ON s.item_id = i.id
      WHERE i.id = ?`,
     [insertItem.lastID]
   );
-  return mapInventoryRow(row);
+  return mapInventoryRow(row); // ! возвращение товара
 }
 
-async function restockInventoryItem(id, quantity, reason) {
+async function restockInventoryItem(id, quantity, reason) { // ! функция пополнения остатка товара
   await initializeDatabase();
-  const item = await get("SELECT id FROM inventory_items WHERE id = ?", [id]);
+  const item = await get("SELECT id FROM inventory_items WHERE id = ?", [id]); // ! получение товара
   if (!item) throw new Error("Inventory item not found");
 
-  const qty = Number(quantity);
+  const qty = Number(quantity); // ! получение нормализованного количества
   if (!Number.isFinite(qty) || qty <= 0) {
-    throw new Error("Quantity must be a positive number");
+    throw new Error("Quantity must be a positive number"); // ! отправка ошибки если количество товара не является положительным числом
   }
 
-  const now = new Date().toISOString();
-  await run(
+  const now = new Date().toISOString(); // ! получение даты создания
+  await run( // ! обновление остатка товара в базе данных
     "UPDATE inventory_stock SET quantity = quantity + ?, updated_at = ? WHERE item_id = ?",
     [qty, now, id]
   );
-  await run(
+  await run( // ! добавление движения товара в базу данных
     `INSERT INTO inventory_movements
      (item_id, movement_type, quantity, reason, reference_type, reference_id, created_at)
      VALUES (?, 'in', ?, ?, ?, ?, ?)`,
     [id, qty, reason || "restock", "manual", null, now]
   );
 
-  const row = await get(
+  const row = await get( // ! получение товара
     `SELECT i.id, i.name, i.item_type, i.unit, s.quantity, s.updated_at
      FROM inventory_items i
      JOIN inventory_stock s ON s.item_id = i.id
      WHERE i.id = ?`,
     [id]
   );
-  return mapInventoryRow(row);
+  return mapInventoryRow(row); // ! возвращение товара
 }
 
-async function deleteInventoryItem(id) {
+async function deleteInventoryItem(id) { // ! функция удаления товара
   await initializeDatabase();
-  const row = await get(
+  const row = await get( // ! получение товара
     `SELECT i.id, i.name, i.item_type, i.unit, s.quantity, s.updated_at
      FROM inventory_items i
      LEFT JOIN inventory_stock s ON s.item_id = i.id
      WHERE i.id = ?`,
     [id]
   );
-  if (!row) throw new Error("Inventory item not found");
+  if (!row) throw new Error("Inventory item not found"); // ! отправка ошибки если товар не найден
 
   await run("DELETE FROM inventory_items WHERE id = ?", [id]);
-  return mapInventoryRow(row);
+  return mapInventoryRow(row); // ! возвращение товара
 }
 
-const DEFAULT_MOVEMENTS_LIMIT = 500;
-const MAX_MOVEMENTS_LIMIT = 2000;
+const DEFAULT_MOVEMENTS_LIMIT = 500; // ! значение по умолчанию для лимита движений
+const MAX_MOVEMENTS_LIMIT = 2000; // ! максимальное значение для лимита движений  
 
-function assertMovementType(raw) {
+function assertMovementType(raw) { // ! функция проверки типа движения
   if (raw == null || String(raw).trim() === "") {
     return null;
   }
-  const v = String(raw).toLowerCase();
+  const v = String(raw).toLowerCase(); 
   if (v !== "in" && v !== "out") {
-    throw new Error("movementType must be in or out");
+    throw new Error("movementType must be in or out"); // ! отправка ошибки если тип движения не валиден
   }
   return v;
 }
 
-function parseMovementsLimit(raw) {
+function parseMovementsLimit(raw) { // ! функция парсинга лимита движений
   if (raw == null || String(raw).trim() === "") {
-    return DEFAULT_MOVEMENTS_LIMIT;
+    return DEFAULT_MOVEMENTS_LIMIT; // ! возвращение значения по умолчанию для лимита движений
   }
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 1) {
-    throw new Error("limit must be a positive number");
+    throw new Error("limit must be a positive number"); // ! отправка ошибки если лимит движений не является положительным числом
   }
-  return Math.min(Math.floor(n), MAX_MOVEMENTS_LIMIT);
+  return Math.min(Math.floor(n), MAX_MOVEMENTS_LIMIT); // ! возвращение минимального значения для лимита движений
 }
 
 /**
@@ -139,47 +139,47 @@ function parseMovementsLimit(raw) {
  * @param {string|undefined} filters.referenceType — например order, manual
  * @param {string|number|undefined} filters.limit — по умолчанию 500, макс. 2000
  */
-async function getInventoryMovements(filters = {}) {
+async function getInventoryMovements(filters = {}) { // ! функция получения истории движений склада
   await initializeDatabase();
 
-  const { fromIso, toIso } = parseOptionalDateBounds(filters.from, filters.to);
+  const { fromIso, toIso } = parseOptionalDateBounds(filters.from, filters.to); // ! получение даты начала и конца
   const movementType = assertMovementType(filters.movementType);
-  const limit = parseMovementsLimit(filters.limit);
+  const limit = parseMovementsLimit(filters.limit); // ! получение лимита движений
 
-  const clauses = [];
-  const params = [];
+  const clauses = []; // ! массив условий
+  const params = []; // ! массив параметров
 
   if (filters.itemId != null && String(filters.itemId).trim() !== "") {
-    const id = Number(filters.itemId);
+    const id = Number(filters.itemId); // ! получение ID товара
     if (!Number.isFinite(id)) {
-      throw new Error("itemId must be a number");
+      throw new Error("itemId must be a number"); // ! отправка ошибки если ID товара не является числом
     }
     clauses.push("m.item_id = ?");
-    params.push(id);
+    params.push(id); // ! добавление параметра в массив параметров
   }
 
   if (fromIso) {
-    clauses.push("datetime(m.created_at) >= datetime(?)");
-    params.push(fromIso);
+    clauses.push("datetime(m.created_at) >= datetime(?)"); // ! добавление условия в массив условий
+    params.push(fromIso); // ! добавление параметра в массив параметров
   }
-  if (toIso) {
+  if (toIso) { // ! если дата конца не пустая
     clauses.push("datetime(m.created_at) <= datetime(?)");
-    params.push(toIso);
+    params.push(toIso); // ! добавление параметра в массив параметров
   }
-  if (movementType) {
+  if (movementType) { // ! если тип движения не пустой
     clauses.push("m.movement_type = ?");
-    params.push(movementType);
+    params.push(movementType); // ! добавление параметра в массив параметров
   }
-  if (filters.referenceType != null && String(filters.referenceType).trim() !== "") {
+  if (filters.referenceType != null && String(filters.referenceType).trim() !== "") { // ! если тип ссылки не пустой
     clauses.push("m.reference_type = ?");
-    params.push(String(filters.referenceType).trim());
+    params.push(String(filters.referenceType).trim()); // ! добавление параметра в массив параметров
   }
 
-  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : "";
+  const whereClause = clauses.length > 0 ? `WHERE ${clauses.join(" AND ")}` : ""; // ! получение условия WHERE
 
-  params.push(limit);
+  params.push(limit); // ! добавление параметра в массив параметров
 
-  const rows = await all(
+  const rows = await all( // ! получение строк движений
     `SELECT m.id, m.item_id, i.name AS item_name, m.movement_type, m.quantity, m.reason,
             m.reference_type, m.reference_id, m.created_at
      FROM inventory_movements m
@@ -190,7 +190,7 @@ async function getInventoryMovements(filters = {}) {
     params
   );
 
-  return rows.map((row) => ({
+  return rows.map((row) => ({ // ! возвращение истории движений
     id: row.id,
     itemId: row.item_id,
     itemName: row.item_name,
@@ -203,10 +203,10 @@ async function getInventoryMovements(filters = {}) {
   }));
 }
 
-module.exports = {
+module.exports = { // ! экспорт функций
   getInventoryItems,
-  createInventoryItem,
-  restockInventoryItem,
-  deleteInventoryItem,
-  getInventoryMovements,
+  createInventoryItem, // ! функция создания товара на складе
+  restockInventoryItem, // ! функция пополнения остатка товара
+  deleteInventoryItem, // ! функция удаления товара
+  getInventoryMovements, // ! функция получения истории движений склада
 };

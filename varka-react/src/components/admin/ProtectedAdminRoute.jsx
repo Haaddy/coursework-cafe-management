@@ -1,8 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { useAdminAuth } from "../../auth/AdminAuthContext";
 
-function ProtectedAdminRoute({ children }) {
-  const { isLoading, isAuthenticated } = useAdminAuth();
+function ProtectedAdminRoute({ children }) { // ! защита админ-маршрутов
+  const { isLoading, isAuthenticated } = useAdminAuth(); // ! состояние авторизации
 
   if (isLoading) {
     return (

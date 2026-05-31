@@ -1,9 +1,9 @@
-function Cart(props) {
+function Cart(props) { // ! корзина текущего заказа
   const { 
-    cart,
-    removeFromCart,  
-    onClickSubmitOrderButton,
-    totalPrice,
+    cart, // ! позиции в корзине
+    removeFromCart, // ! удаление позиции
+    onClickSubmitOrderButton, // ! открытие оформления заказа
+    totalPrice, // ! итоговая сумма
    } = props;
 
 

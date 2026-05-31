@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { API_BASE_URL } from "../constants/api";
 
-function formatVolume(volume) {
+function formatVolume(volume) { // ! формат объёма для отображения
   if (volume == null || volume === "") return "—";
   return `${volume} мл`;
 }
 
-function getStatusLabel(status) {
+function getStatusLabel(status) { // ! подпись статуса заказа
   const labels = {
     pending: "Создан",
     ready: "Готов",
@@ -16,7 +16,7 @@ function getStatusLabel(status) {
   return labels[status] || status;
 }
 
-function getPaymentMethodLabel(method) {
+function getPaymentMethodLabel(method) { // ! подпись способа оплаты
   const labels = {
     cash: "Наличные",
     card: "Карта",
@@ -25,17 +25,17 @@ function getPaymentMethodLabel(method) {
   return labels[method] || method;
 }
 
-function OrderDetailsModal({ isOpen, onClose, orderId, onStatusChanged }) {
-  const [order, setOrder] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [employeeCode, setEmployeeCode] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [actionSuccess, setActionSuccess] = useState("");
+function OrderDetailsModal({ isOpen, onClose, orderId, onStatusChanged }) { // ! модальное окно деталей заказа
+  const [order, setOrder] = useState(null); // ! данные заказа
+  const [loading, setLoading] = useState(false); // ! загрузка
+  const [error, setError] = useState(null); // ! ошибка загрузки
+  const [saving, setSaving] = useState(false); // ! сохранение действия
+  const [paymentMethod, setPaymentMethod] = useState("cash"); // ! способ оплаты
+  const [employeeCode, setEmployeeCode] = useState(""); // ! код сотрудника для закрытия
+  const [actionError, setActionError] = useState(""); // ! ошибка действия
+  const [actionSuccess, setActionSuccess] = useState(""); // ! успешное сообщение
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка заказа при открытии модалки
     if (!isOpen || !orderId) {
       setOrder(null);
       setError(null);
@@ -78,7 +78,7 @@ function OrderDetailsModal({ isOpen, onClose, orderId, onStatusChanged }) {
     };
   }, [isOpen, orderId]);
 
-  const markReady = () => {
+  const markReady = () => { // ! отметить заказ готовым
     if (!orderId) return;
     setActionError("");
     setActionSuccess("");
@@ -105,7 +105,7 @@ function OrderDetailsModal({ isOpen, onClose, orderId, onStatusChanged }) {
       .finally(() => setSaving(false));
   };
 
-  const payOrder = () => {
+  const payOrder = () => { // ! провести оплату заказа
     if (!orderId) return;
     setActionError("");
     setActionSuccess("");
@@ -132,7 +132,7 @@ function OrderDetailsModal({ isOpen, onClose, orderId, onStatusChanged }) {
       .finally(() => setSaving(false));
   };
 
-  const closeOrder = () => {
+  const closeOrder = () => { // ! закрыть чек по коду сотрудника
     if (!orderId) return;
     if (!employeeCode.trim()) {
       setActionError("Введите код сотрудника");

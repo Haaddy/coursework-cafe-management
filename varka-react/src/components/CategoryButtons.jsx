@@ -1,8 +1,8 @@
-function CategoryButtons(props) {
+function CategoryButtons(props) { // ! кнопки фильтра категорий меню
 
     const {
-        onCategoryChange,
-        activeCategory,
+        onCategoryChange, // ! смена категории
+        activeCategory, // ! активная категория
     }=props
 
     return (

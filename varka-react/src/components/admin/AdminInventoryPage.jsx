@@ -2,51 +2,51 @@ import { useState, useEffect, useCallback } from "react";
 import AdminSectionHeader from "./AdminSectionHeader";
 import { adminFetch } from "../../utils/adminApi";
 
-function formatLocalYmd(date) {
+function formatLocalYmd(date) { // ! дата в формате YYYY-MM-DD
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
-function defaultMovementsDateRange() {
+function defaultMovementsDateRange() { // ! диапазон дат журнала по умолчанию
   const to = new Date();
   const from = new Date(to.getFullYear(), to.getMonth(), 1);
   return { from: formatLocalYmd(from), to: formatLocalYmd(to) };
 }
 
-function movementTypeLabel(type) {
+function movementTypeLabel(type) { // ! подпись типа движения
   if (type === "in") return "Приход";
   if (type === "out") return "Расход";
   return type;
 }
 
-function formatDateTime(iso) {
+function formatDateTime(iso) { // ! формат даты и времени
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString("ru-RU");
 }
 
-function AdminInventoryPage() {
-  const [inventoryItems, setInventoryItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+function AdminInventoryPage() { // ! страница склада и журнала движений
+  const [inventoryItems, setInventoryItems] = useState([]); // ! позиции склада
+  const [isLoading, setIsLoading] = useState(false); // ! загрузка / сохранение
+  const [error, setError] = useState(""); // ! ошибка операции
 
-  const [itemName, setItemName] = useState("");
-  const [itemType, setItemType] = useState("ingredient");
-  const [itemUnit, setItemUnit] = useState("pcs");
-  const [initialQuantity, setInitialQuantity] = useState(0);
+  const [itemName, setItemName] = useState(""); // ! название новой позиции
+  const [itemType, setItemType] = useState("ingredient"); // ! тип позиции
+  const [itemUnit, setItemUnit] = useState("pcs"); // ! единица измерения
+  const [initialQuantity, setInitialQuantity] = useState(0); // ! начальное количество
 
-  const [{ from: movFrom, to: movTo }, setMovRange] = useState(defaultMovementsDateRange);
-  const [movItemId, setMovItemId] = useState("");
-  const [movType, setMovType] = useState("");
-  const [movRefType, setMovRefType] = useState("");
-  const [movements, setMovements] = useState([]);
-  const [movementsLoading, setMovementsLoading] = useState(false);
-  const [movementsError, setMovementsError] = useState("");
+  const [{ from: movFrom, to: movTo }, setMovRange] = useState(defaultMovementsDateRange); // ! фильтр дат журнала
+  const [movItemId, setMovItemId] = useState(""); // ! фильтр по позиции
+  const [movType, setMovType] = useState(""); // ! фильтр типа движения
+  const [movRefType, setMovRefType] = useState(""); // ! фильтр типа ссылки
+  const [movements, setMovements] = useState([]); // ! записи журнала
+  const [movementsLoading, setMovementsLoading] = useState(false); // ! загрузка журнала
+  const [movementsError, setMovementsError] = useState(""); // ! ошибка журнала
 
-  const loadInventory = () => {
+  const loadInventory = () => { // ! загрузка склада
     setIsLoading(true);
     adminFetch("/inventory")
       .then((res) => {
@@ -63,7 +63,7 @@ function AdminInventoryPage() {
       .finally(() => setIsLoading(false));
   };
 
-  const loadMovements = useCallback(() => {
+  const loadMovements = useCallback(() => { // ! загрузка журнала движений
     const params = new URLSearchParams();
     if (movFrom) params.set("from", movFrom);
     if (movTo) params.set("to", movTo);
@@ -75,13 +75,14 @@ function AdminInventoryPage() {
     setMovementsLoading(true);
     setMovementsError("");
     adminFetch(`/inventory/movements?${params.toString()}`)
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(data.error || `Ошибка журнала: ${res.status}`);
-        }
-        return data;
-      })
+      .then((res) =>
+        res.json().catch(() => ({})).then((data) => {
+          if (!res.ok) {
+            throw new Error(data.error || `Ошибка журнала: ${res.status}`);
+          }
+          return data;
+        })
+      )
       .then((data) => setMovements(Array.isArray(data) ? data : []))
       .catch((err) => {
         setMovements([]);
@@ -90,15 +91,15 @@ function AdminInventoryPage() {
       .finally(() => setMovementsLoading(false));
   }, [movFrom, movTo, movItemId, movType, movRefType]);
 
-  useEffect(() => {
+  useEffect(() => { // ! загрузка склада при монтировании
     loadInventory();
   }, []);
 
-  useEffect(() => {
+  useEffect(() => { // ! перезагрузка журнала при смене фильтров
     loadMovements();
   }, [loadMovements]);
 
-  const handleCreateItem = () => {
+  const handleCreateItem = () => { // ! создание позиции склада
     const normalizedName = itemName.trim();
     const normalizedUnit = itemUnit.trim() || "pcs";
     const normalizedQuantity = Number(initialQuantity) || 0;
@@ -144,7 +145,7 @@ function AdminInventoryPage() {
       .finally(() => setIsLoading(false));
   };
 
-  const handleRestockItem = (id) => {
+  const handleRestockItem = (id) => { // ! пополнение остатка
     const rawQuantity = window.prompt("Введите количество для пополнения:", "1");
     if (rawQuantity == null) return;
 
@@ -180,7 +181,7 @@ function AdminInventoryPage() {
       .finally(() => setIsLoading(false));
   };
 
-  const handleDeleteItem = (id, name) => {
+  const handleDeleteItem = (id, name) => { // ! удаление позиции склада
     const isConfirmed = window.confirm(`Удалить позицию "${name}"?`);
     if (!isConfirmed) return;
 

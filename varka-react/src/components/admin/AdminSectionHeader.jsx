@@ -2,13 +2,12 @@ import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useAdminAuth } from "../../auth/AdminAuthContext";
 
-function AdminSectionHeader({ title, subtitle, backTo = "/" }) {
+function AdminSectionHeader({ title, subtitle, backTo = "/" }) { // ! шапка раздела админки
   const navigate = useNavigate();
   const { logout } = useAdminAuth();
 
-  const onLogout = async () => {
-    await logout();
-    navigate("/admin/login", { replace: true });
+  const onLogout = () => { // ! выход и переход на login
+    logout().then(() => navigate("/admin/login", { replace: true }));
   };
 
   return (

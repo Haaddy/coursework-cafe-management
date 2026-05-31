@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 const VOLUME_OPTIONS = ["250", "350", "500"];
 
-function ProductCard(props) {
+function ProductCard(props) { // ! карточка товара в меню
     const {
         id,
         name,
@@ -14,40 +14,40 @@ function ProductCard(props) {
         onAdd,
     } = props;
 
-    const [selectedVolume, setSelectedVolume] = useState(isVolumes ? "250" : null);
+    const [selectedVolume, setSelectedVolume] = useState(isVolumes ? "250" : null); // ! выбранный объем
 
-    const isVolumeAvailable = (volume) => volumeAvailability?.[volume] !== false;
+    const isVolumeAvailable = (volume) => volumeAvailability?.[volume] !== false; // ! проверка доступности объема
 
-    const currentVolumeAvailable = isVolumes
+    const currentVolumeAvailable = isVolumes // ! проверка доступности объема
         ? isVolumeAvailable(selectedVolume)
         : available !== false;
 
-    const currentStockMessage = useMemo(() => {
-        if (currentVolumeAvailable) {
+    const currentStockMessage = useMemo(() => { // ! сообщение о недоступности товара
+        if (currentVolumeAvailable) { // ! если объем доступен
             return null;
         }
-        if (isVolumes) {
+        if (isVolumes) { // ! если объем доступен
             return "Для выбранного объёма закончились ингредиенты";
         }
-        return stockMessage || "Товар временно недоступен";
+        return stockMessage || "Товар временно недоступен"; // ! сообщение о недостаточности ингредиентов
     }, [currentVolumeAvailable, isVolumes, stockMessage]);
 
-    useEffect(() => {
-        if (!isVolumes || !volumeAvailability) {
+    useEffect(() => { // ! эффект
+        if (!isVolumes || !volumeAvailability) { // ! если объем не доступен
             return;
         }
-        if (isVolumeAvailable(selectedVolume)) {
+        if (isVolumeAvailable(selectedVolume)) { // ! если объем доступен
             return;
         }
-        const firstAvailable = VOLUME_OPTIONS.find((volume) => isVolumeAvailable(volume));
+        const firstAvailable = VOLUME_OPTIONS.find((volume) => isVolumeAvailable(volume)); // ! поиск первого доступного объема
         if (firstAvailable) {
-            setSelectedVolume(firstAvailable);
+            setSelectedVolume(firstAvailable); // ! установка выбранного объема
         }
     }, [isVolumes, volumeAvailability, selectedVolume]);
 
-    const currentPrise = isVolumes ? price[selectedVolume] : price;
+    const currentPrise = isVolumes ? price[selectedVolume] : price; // ! текущая цена
 
-    const onAddClick = () => {
+    const onAddClick = () => { // ! клик на кнопку добавления в корзину
         if (!currentVolumeAvailable) {
             return;
         }
@@ -59,8 +59,8 @@ function ProductCard(props) {
         });
     };
 
-    const renderVolumeOption = (volume) => {
-        const volumeAvailable = isVolumeAvailable(volume);
+    const renderVolumeOption = (volume) => { // ! рендер объема
+        const volumeAvailable = isVolumeAvailable(volume); // ! проверка доступности объема
         return (
             <label
                 key={volume}

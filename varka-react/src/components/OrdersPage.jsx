@@ -3,112 +3,112 @@ import { Link } from "react-router-dom";
 import OrderDetailsModal from "./OrderDetailsModal";
 import { API_BASE_URL } from "../constants/api";
 
-function getStatusLabel(status) {
+function getStatusLabel(status) { // ! получение статуса заказа
   const labels = {
     pending: "Создан",
     ready: "Готов",
     paid: "Оплачен",
     closed: "Закрыт",
   };
-  return labels[status] || status;
+  return labels[status] || status; // ! возвращение статуса заказа
 }
 
-function getPaymentMethodLabel(method) {
+function getPaymentMethodLabel(method) { // ! получение метода оплаты
   const labels = {
     cash: "Наличные",
     card: "Карта",
     other: "Другое",
   };
-  return labels[method] || method;
+  return labels[method] || method; // ! возвращение метода оплаты
 }
 
-function formatDateToIsoDay(date) {
+function formatDateToIsoDay(date) { // ! форматирование даты
   return date.toISOString().slice(0, 10);
 }
 
-function getStatusFilterFromOrder(status) {
+function getStatusFilterFromOrder(status) { // ! получение статуса фильтра заказа
   return status === "pending" || status === "ready" || status === "paid" ? "active" : status;
 }
 
-function OrdersPage() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [detailsOrderId, setDetailsOrderId] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("active");
-  const [dateFilter, setDateFilter] = useState("today");
-  const [customDate, setCustomDate] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+function OrdersPage() { // ! страница списка заказов
+  const [orders, setOrders] = useState([]); // ! заказы
+  const [loading, setLoading] = useState(false); // ! загрузка
+  const [error, setError] = useState(""); // ! ошибка загрузки
+  const [detailsOpen, setDetailsOpen] = useState(false); // ! открытие деталей заказа
+  const [detailsOrderId, setDetailsOrderId] = useState(null); // ! ID заказа
+  const [statusFilter, setStatusFilter] = useState("active"); // ! фильтр по статусу
+  const [dateFilter, setDateFilter] = useState("today"); // ! фильтр даты
+  const [customDate, setCustomDate] = useState(""); // ! дата для фильтра «выбрать дату»
+  const [searchInput, setSearchInput] = useState(""); // ! поиск
+  const [searchQuery, setSearchQuery] = useState(""); // ! поиск заказа
 
-  const loadOrders = useCallback(() => {
-    const query = new URLSearchParams();
-    if (dateFilter === "today") {
+  const loadOrders = useCallback(() => { // ! загрузка заказов
+    const query = new URLSearchParams(); // ! query-параметры
+    if (dateFilter === "today") { // ! если фильтр даты сегодня
       query.set("date", "today");
-    } else if (dateFilter === "yesterday") {
+    } else if (dateFilter === "yesterday") { // ! если фильтр даты вчера
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       query.set("date", formatDateToIsoDay(yesterday));
-    } else if (dateFilter === "custom" && customDate) {
+    } else if (dateFilter === "custom" && customDate) { // ! если фильтр даты вручную
       query.set("date", customDate);
-    } else if (dateFilter === "all") {
+    } else if (dateFilter === "all") { // ! если фильтр даты все
       query.set("includeAll", "true");
     }
 
-    if (searchQuery.trim()) {
-      query.set("q", searchQuery.trim());
+    if (searchQuery.trim()) { // ! если поиск не пустой
+      query.set("q", searchQuery.trim()); // ! установка поиска
     }
 
-    setLoading(true);
-    setError("");
-    fetch(`${API_BASE_URL}/orders?${query.toString()}`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Не удалось загрузить заказы");
+    setLoading(true); // ! установка загрузки
+    setError(""); // ! установка ошибки
+    fetch(`${API_BASE_URL}/orders?${query.toString()}`) // ! запрос к API
+      .then((res) => { 
+        if (!res.ok) throw new Error("Не удалось загрузить заказы"); // ! ошибка загрузки заказов
         return res.json();
       })
-      .then(setOrders)
-      .catch((err) => setError(err.message || "Ошибка загрузки заказов"))
+      .then(setOrders) // ! установка заказов
+      .catch((err) => setError(err.message || "Ошибка загрузки заказов")) // ! установка ошибки
       .finally(() => setLoading(false));
   }, [dateFilter, customDate, searchQuery]);
 
-  useEffect(() => {
-    loadOrders();
+  useEffect(() => { // ! эффект
+    loadOrders(); // ! загрузка заказов
   }, [loadOrders]);
 
-  const markReady = (orderId) => {
+  const markReady = (orderId) => { // ! отметить заказ готовым
     fetch(`${API_BASE_URL}/orders/${encodeURIComponent(orderId)}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "ready" }),
+      method: "PATCH", // ! метод запроса
+      headers: { "Content-Type": "application/json" }, // ! заголовки запроса
+      body: JSON.stringify({ status: "ready" }), // ! тело запроса
     })
-      .then((res) => {
-        if (!res.ok) {
-          return res.json().then((data) => {
+      .then((res) => { // ! обработка ответа
+        if (!res.ok) { // ! если ошибка
+          return res.json().then((data) => { // ! обработка ответа
             throw new Error(data?.error || "Не удалось обновить");
           });
         }
         return res.json();
       })
-      .then(() => loadOrders())
-      .catch((err) => alert(err.message || "Ошибка"));
+      .then(() => loadOrders()) // ! загрузка заказов
+      .catch((err) => alert(err.message || "Ошибка")); // ! обработка ошибки
   };
 
-  const counts = useMemo(() => {
+  const counts = useMemo(() => { // ! подсчет заказов
     const draft = { all: orders.length, active: 0, pending: 0, ready: 0, paid: 0, closed: 0 };
-    for (const order of orders) {
+    for (const order of orders) { // ! обработка заказов
       const status = order.status || "";
-      if (draft[status] != null) {
+      if (draft[status] != null) { // ! если статус не пустой
         draft[status] += 1;
       }
       if (getStatusFilterFromOrder(status) === "active") {
-        draft.active += 1;
+        draft.active += 1; // ! увеличение счетчика активных заказов
       }
     }
     return draft;
-  }, [orders]);
+  }, [orders]); // ! зависимость
 
-  const displayedOrders = useMemo(() => {
+  const displayedOrders = useMemo(() => { // ! отображаемые заказы    
     if (statusFilter === "all") return orders;
     if (statusFilter === "active") {
       return orders.filter((order) => getStatusFilterFromOrder(order.status) === "active");
@@ -116,17 +116,17 @@ function OrdersPage() {
     return orders.filter((order) => order.status === statusFilter);
   }, [orders, statusFilter]);
 
-  const openOrderDetails = (orderId) => {
+  const openOrderDetails = (orderId) => { // ! открыть модалку деталей заказа
     setDetailsOrderId(orderId);
     setDetailsOpen(true);
   };
 
-  const closeOrderDetails = () => {
+  const closeOrderDetails = () => { // ! закрыть модалку деталей
     setDetailsOpen(false);
     setDetailsOrderId(null);
   };
 
-  const applySearch = () => {
+  const applySearch = () => { // ! применить поиск по номеру заказа
     setSearchQuery(searchInput.trim());
   };
 

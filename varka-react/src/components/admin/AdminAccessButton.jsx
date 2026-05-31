@@ -1,4 +1,4 @@
-function AdminAccessButton({ onClick }) {
+function AdminAccessButton({ onClick }) { // ! кнопка доступа к админке
   return (
     <button
       type="button"

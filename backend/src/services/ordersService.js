@@ -1,15 +1,15 @@
 const crypto = require("crypto");
-const { all, get, run, initializeDatabase } = require("../data/database");
+const { all, get, run, initializeDatabase } = require("../data/database"); // ! импорт модуля базы данных
 
-const ORDER_STATUSES = Object.freeze({
+const ORDER_STATUSES = Object.freeze({ // ! статусы заказов
     PENDING: "pending",
     READY: "ready",
     PAID: "paid",
     CLOSED: "closed",
 });
 
-class OrderServiceError extends Error {
-    constructor(message, statusCode, code = "ORDER_ERROR") {
+class OrderServiceError extends Error { // ! класс ошибки заказа
+    constructor(message, statusCode, code = "ORDER_ERROR") { // ! конструктор класса ошибки заказа
         super(message);
         this.name = "OrderServiceError";
         this.statusCode = statusCode;
@@ -17,76 +17,75 @@ class OrderServiceError extends Error {
     }
 }
 
-function makeOrderServiceError(message, statusCode, code) {
+function makeOrderServiceError(message, statusCode, code) { // ! функция создания ошибки заказа
     return new OrderServiceError(message, statusCode, code);
 }
 
-function isStatusTransitionAllowed(currentStatus, nextStatus) {
-    if (currentStatus === nextStatus) return true;
+function isStatusTransitionAllowed(currentStatus, nextStatus) { // ! функция проверки допустимости перехода статуса заказа
+    if (currentStatus === nextStatus) return true; 
     if (currentStatus === ORDER_STATUSES.PENDING && nextStatus === ORDER_STATUSES.READY) return true;
     if (currentStatus === ORDER_STATUSES.READY && nextStatus === ORDER_STATUSES.PAID) return true;
     if (currentStatus === ORDER_STATUSES.PAID && nextStatus === ORDER_STATUSES.CLOSED) return true;
     return false;
 }
 
-async function getOrderLifecycleState(id) {
-    const order = await get(
+async function getOrderLifecycleState(id) { // ! функция получения состояния заказа
+    const order = await get( // ! получение заказа
         `SELECT id, status, closed_by_employee_id
          FROM orders
          WHERE id = ?`,
         [String(id)]
     );
 
-    if (!order) {
-        throw makeOrderServiceError("Order not found", 404, "ORDER_NOT_FOUND");
+    if (!order) { 
+        throw makeOrderServiceError("Order not found", 404, "ORDER_NOT_FOUND"); // ! отправка ошибки если заказ не найден
     }
 
-    return order;
+    return order; // ! возвращение заказа
 }
 
-function normalizeOrderDateForNumber(value) {
-    const parsedDate = value ? new Date(value) : new Date();
+function normalizeOrderDateForNumber(value) { // ! функция нормализации даты заказа
+    const parsedDate = value ? new Date(value) : new Date(); // ! получение даты заказа
     const safeDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
-    return safeDate.toISOString().slice(0, 10).replace(/-/g, "");
+    return safeDate.toISOString().slice(0, 10).replace(/-/g, ""); // ! возвращение нормализованной даты заказа
 }
 
-function buildOrderNumber(dateValue, sequence) {
-    const datePart = normalizeOrderDateForNumber(dateValue);
-    return `${datePart}-${String(sequence).padStart(4, "0")}`;
+function buildOrderNumber(dateValue, sequence) { // ! функция построения номера заказа
+    const datePart = normalizeOrderDateForNumber(dateValue); // ! получение даты заказа
+    return `${datePart}-${String(sequence).padStart(4, "0")}`; // ! возвращение номера заказа
 }
 
-async function generateNextOrderNumber(createdAt) {
-    // order_number is human-facing; id remains internal UUID for relations and API path params.
-    const datePart = normalizeOrderDateForNumber(createdAt);
-    const latestRow = await get(
+async function generateNextOrderNumber(createdAt) { // ! функция генерации следующего номера заказа
+    
+    const datePart = normalizeOrderDateForNumber(createdAt); // ! получение даты заказа
+    const latestRow = await get( // ! получение последнего заказа
         `SELECT order_number
          FROM orders
          WHERE order_number LIKE ?
          ORDER BY order_number DESC
          LIMIT 1`,
-        [`${datePart}-%`]
+        [`${datePart}-%`] 
     );
 
-    let nextSequence = 1;
-    if (latestRow?.order_number) {
+    let nextSequence = 1; // ! начальное значение последовательности
+    if (latestRow?.order_number) { // ! если есть последний заказ
         const match = new RegExp(`^${datePart}-(\\d+)$`).exec(String(latestRow.order_number));
-        if (match) {
+        if (match) { // ! если есть совпадение
             nextSequence = Number(match[1]) + 1;
         }
     }
 
-    return buildOrderNumber(createdAt, nextSequence);
+    return buildOrderNumber(createdAt, nextSequence); // ! возвращение номера заказа
 }
 
-function mapOrderRowToBase(orderRow) {
-    const closedByEmployeeId = orderRow.closed_by_employee_id == null
+function mapOrderRowToBase(orderRow) { // ! функция преобразования строки заказа в базовый объект
+    const closedByEmployeeId = orderRow.closed_by_employee_id == null  
         ? null
-        : Number(orderRow.closed_by_employee_id);
+        : Number(orderRow.closed_by_employee_id); // ! получение ID сотрудника закрывшего заказ
 
-    return {
+    return { // ! возвращение базового объекта заказа
         id: orderRow.id,
         orderNumber: orderRow.order_number,
-        name: orderRow.name,
         status: orderRow.status,
         totalPrice: Number(orderRow.total_price),
         paymentMethod: orderRow.payment_method,
@@ -95,7 +94,7 @@ function mapOrderRowToBase(orderRow) {
         closedAt: orderRow.closed_at,
         closedByEmployee: closedByEmployeeId == null
             ? null
-            : {
+            : { // ! возвращение объекта сотрудника закрывшего заказ
                 id: closedByEmployeeId,
                 fullName: orderRow.closed_by_employee_name,
             },
@@ -103,8 +102,8 @@ function mapOrderRowToBase(orderRow) {
     };
 }
 
-async function expandOrder(orderRow) { // 
-    const itemsRows = await all(
+async function expandOrder(orderRow) { // ! функция расширения заказа
+    const itemsRows = await all( // ! получение строк заказа
         `SELECT menu_id, name_snapshot, price_snapshot, volume
          FROM order_items
          WHERE order_id = ?
@@ -112,48 +111,48 @@ async function expandOrder(orderRow) { //
         [orderRow.id]
     );
 
-    return {
+    return { // ! возвращение расширенного объекта заказа
         ...mapOrderRowToBase(orderRow),
-        items: itemsRows.map((item) => ({
+        items: itemsRows.map((item) => ({ // ! возвращение массива объектов заказа
             id: item.menu_id,
             name: item.name_snapshot,
-            price: Number(item.price_snapshot),
-            volume: item.volume,
-        })),
+            price: Number(item.price_snapshot), // ! получение цены заказа
+            volume: item.volume, // ! получение объема заказа
+        })), 
     };
 }
 
 
-async function getOrders(filters = {}) {
+async function getOrders(filters = {}) { // ! функция получения списка заказов
     await initializeDatabase();
-    const validStatuses = new Set(Object.values(ORDER_STATUSES));
-    const where = [];
-    const params = [];
+    const validStatuses = new Set(Object.values(ORDER_STATUSES)); // ! получение списка статусов заказов
+    const where = []; // ! массив условий
+    const params = []; // ! массив параметров
 
-    if (filters.activeOnly) {
+    if (filters.activeOnly) { // ! если фильтр активных заказов
         where.push("o.status IN ('pending', 'ready', 'paid')");
     }
 
-    if (filters.status) {
-        const normalizedStatus = String(filters.status).trim().toLowerCase();
-        if (!validStatuses.has(normalizedStatus)) {
+    if (filters.status) { // ! если фильтр статуса заказа
+        const normalizedStatus = String(filters.status).trim().toLowerCase(); // ! получение нормализованного статуса заказа
+        if (!validStatuses.has(normalizedStatus)) { // ! если статус заказа не в списке допустимых статусов
             throw makeOrderServiceError(
-                "Invalid status filter. Allowed: pending, ready, paid, closed",
-                400,
-                "ORDER_INVALID_STATUS_FILTER"
+                "Invalid status filter. Allowed: pending, ready, paid, closed", // ! отправка ошибки если статус заказа не в списке допустимых статусов
+                400, // ! статус ошибки
+                "ORDER_INVALID_STATUS_FILTER" // ! код ошибки
             );
         }
-        where.push("o.status = ?");
-        params.push(normalizedStatus);
+        where.push("o.status = ?"); // ! добавление условия в массив условий
+        params.push(normalizedStatus); // ! добавление параметра в массив параметров
     }
 
-    if (filters.date) {
-        const normalizedDate = String(filters.date).trim().toLowerCase();
+    if (filters.date) { // ! если фильтр даты заказа
+        const normalizedDate = String(filters.date).trim().toLowerCase(); // ! получение нормализованной даты заказа
         if (normalizedDate === "today") {
-            where.push("date(o.created_at) = date('now', 'localtime')");
-        } else if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
-            where.push("date(o.created_at) = date(?)");
-            params.push(normalizedDate);
+            where.push("date(o.created_at) = date('now', 'localtime')"); // ! добавление условия в массив условий
+        } else if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) { // ! если дата заказа в формате YYYY-MM-DD
+            where.push("date(o.created_at) = date(?)"); // ! добавление условия в массив условий
+            params.push(normalizedDate); // ! добавление параметра в массив параметров
         } else {
             throw makeOrderServiceError(
                 "Invalid date filter. Use today or YYYY-MM-DD",
@@ -163,48 +162,46 @@ async function getOrders(filters = {}) {
         }
     }
 
-    if (filters.from) {
+    if (filters.from) { // ! если фильтр даты с
         const normalizedFrom = String(filters.from).trim();
-        const date = new Date(normalizedFrom);
-        if (Number.isNaN(date.getTime())) {
+        const date = new Date(normalizedFrom); // ! получение даты заказа
+        if (Number.isNaN(date.getTime())) { // ! если дата заказа не валидна
             throw makeOrderServiceError(
-                "Invalid from filter. Use ISO date",
-                400,
-                "ORDER_INVALID_FROM_FILTER"
+                "Invalid from filter. Use ISO date", // ! отправка ошибки если дата заказа не валидна
+                400, // ! статус ошибки
+                "ORDER_INVALID_FROM_FILTER" // ! код ошибки
             );
         }
-        where.push("o.created_at >= ?");
-        params.push(date.toISOString());
+        where.push("o.created_at >= ?"); // ! добавление условия в массив условий
+        params.push(date.toISOString()); // ! добавление параметра в массив параметров
     }
-
-    if (filters.to) {
-        const normalizedTo = String(filters.to).trim();
-        const date = new Date(normalizedTo);
-        if (Number.isNaN(date.getTime())) {
+    if (filters.to) { // ! если фильтр даты до
+        const normalizedTo = String(filters.to).trim(); // ! получение нормализованной даты заказа
+        const date = new Date(normalizedTo); // ! получение даты заказа
+        if (Number.isNaN(date.getTime())) { // ! если дата заказа не валидна
             throw makeOrderServiceError(
-                "Invalid to filter. Use ISO date",
+                "Invalid to filter. Use ISO date", // ! отправка ошибки если дата заказа не валидна
                 400,
                 "ORDER_INVALID_TO_FILTER"
             );
         }
-        where.push("o.created_at <= ?");
-        params.push(date.toISOString());
+        where.push("o.created_at <= ?"); // ! добавление условия в массив условий
+        params.push(date.toISOString()); // ! добавление параметра в массив параметров
     }
 
-    if (filters.q) {
-        const normalizedQuery = String(filters.q).trim();
-        if (normalizedQuery) {
-            where.push("o.order_number LIKE ?");
-            params.push(`%${normalizedQuery}%`);
+    if (filters.q) { // ! если фильтр поиска
+        const normalizedQuery = String(filters.q).trim(); // ! получение нормализованного запроса
+        if (normalizedQuery) { // ! если запрос не пустой
+            where.push("o.order_number LIKE ?"); // ! добавление условия в массив условий
+            params.push(`%${normalizedQuery}%`); // ! добавление параметра в массив параметров
         }
     }
 
-    const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
-    const orderRows = await all(
+    const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : ""; // ! получение строки условий
+    const orderRows = await all( // ! получение строк заказа
         `SELECT
             o.id,
             o.order_number,
-            o.name,
             o.status,
             o.total_price,
             o.payment_method,
@@ -227,16 +224,15 @@ async function getOrders(filters = {}) {
            o.created_at DESC`,
         params
     );
-    return Promise.all(orderRows.map(expandOrder));
+    return Promise.all(orderRows.map(expandOrder)); // ! возвращение списка заказов
 }
 
-async function getOrderById(id) {
+async function getOrderById(id) { // ! функция получения заказа по ID
     await initializeDatabase();
-    const orderRow = await get(
+    const orderRow = await get( // ! получение строки заказа
         `SELECT
             o.id,
             o.order_number,
-            o.name,
             o.status,
             o.total_price,
             o.payment_method,
@@ -250,13 +246,13 @@ async function getOrderById(id) {
          WHERE o.id = ?`,
         [String(id)]
     );
-    if (!orderRow) {
-        throw makeOrderServiceError("Order not found", 404, "ORDER_NOT_FOUND");
+    if (!orderRow) { 
+        throw makeOrderServiceError("Order not found", 404, "ORDER_NOT_FOUND"); // ! отправка ошибки если заказ не найден
     }
-    return expandOrder(orderRow);
+    return expandOrder(orderRow); // ! возвращение расширенного объекта заказа
 }
 
-function normalizeCartItem(item, index) {
+function normalizeCartItem(item, index) { // ! функция нормализации товара в корзине
     if (!item || typeof item !== "object") {
         throw makeOrderServiceError(
             `Cart item #${index + 1} is invalid`,
@@ -265,8 +261,8 @@ function normalizeCartItem(item, index) {
         );
     }
 
-    const normalizedName = String(item.name || "").trim();
-    if (!normalizedName) {
+    const normalizedName = String(item.name || "").trim(); // ! получение нормализованного имени товара
+    if (!normalizedName) { // ! если имя товара не валидно
         throw makeOrderServiceError(
             `Cart item #${index + 1} name is required`,
             400,
@@ -274,19 +270,19 @@ function normalizeCartItem(item, index) {
         );
     }
 
-    const normalizedPrice = Number(item.price);
-    if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) {
+    const normalizedPrice = Number(item.price); // ! получение нормализованной цены товара
+    if (!Number.isFinite(normalizedPrice) || normalizedPrice <= 0) { // ! если цена товара не валидна
         throw makeOrderServiceError(
-            `Cart item #${index + 1} price must be greater than 0`,
+            `Cart item #${index + 1} price must be greater than 0`, // ! отправка ошибки если цена товара не валидна
             400,
             "ORDER_INVALID_CART_ITEM_PRICE"
         );
     }
 
-    let normalizedMenuId = null;
-    if (item.id != null && String(item.id).trim() !== "") {
-        normalizedMenuId = Number(item.id);
-        if (!Number.isInteger(normalizedMenuId) || normalizedMenuId <= 0) {
+    let normalizedMenuId = null; // ! начальное значение ID товара
+    if (item.id != null && String(item.id).trim() !== "") { // ! если ID товара не пустой
+        normalizedMenuId = Number(item.id); // ! получение нормализованного ID товара
+        if (!Number.isInteger(normalizedMenuId) || normalizedMenuId <= 0) { // ! если ID товара не валидно
             throw makeOrderServiceError(
                 `Cart item #${index + 1} id is invalid`,
                 400,
@@ -295,53 +291,50 @@ function normalizeCartItem(item, index) {
         }
     }
 
-    let normalizedVolume = null;
-    if (item.volume != null && String(item.volume).trim() !== "") {
-        const volumeNumber = Number(item.volume);
-        if (!Number.isFinite(volumeNumber) || volumeNumber <= 0) {
+    let normalizedVolume = null; // ! начальное значение объема товара
+    if (item.volume != null && String(item.volume).trim() !== "") { // ! если объем товара не пустой
+        const volumeNumber = Number(item.volume); // ! получение нормализованного объема товара
+        if (!Number.isFinite(volumeNumber) || volumeNumber <= 0) { // ! если объем товара не валиден
             throw makeOrderServiceError(
-                `Cart item #${index + 1} volume is invalid`,
+                `Cart item #${index + 1} volume is invalid`, // ! отправка ошибки если объем товара не валиден
                 400,
                 "ORDER_INVALID_CART_ITEM_VOLUME"
             );
         }
-        normalizedVolume = String(item.volume);
+        normalizedVolume = String(item.volume); // ! получение нормализованного объема товара
     }
 
-    return {
+    return { // ! возвращение нормализованного товара
         id: normalizedMenuId,
-        name: normalizedName,
-        price: normalizedPrice,
-        volume: normalizedVolume,
+        name: normalizedName, // ! получение нормализованного имени товара
+        price: normalizedPrice, // ! получение нормализованной цены товара
+        volume: normalizedVolume, // ! получение нормализованного объема товара
     };
 }
 
-async function createOrder(name, cart) {
+async function createOrder(cart) { // ! функция создания заказа
     await initializeDatabase();
-    const normalizedCart = cart.map((item, index) => normalizeCartItem(item, index));
+    const normalizedCart = cart.map((item, index) => normalizeCartItem(item, index)); // ! получение нормализованной корзины
 
-    const totalPrice = normalizedCart.reduce((acc, item) => acc + Number(item.price), 0);
-    const orderId = crypto.randomUUID?.() || String(Date.now());
-    const createdAt = new Date().toISOString();
-    const normalizedName = typeof name === "string" ? name.trim() : "";
-    const now = () => new Date().toISOString();
+    const totalPrice = normalizedCart.reduce((acc, item) => acc + Number(item.price), 0); // ! получение общей цены корзины
+    const orderId = crypto.randomUUID?.() || String(Date.now()); // ! получение ID заказа
+    const createdAt = new Date().toISOString(); // ! получение даты создания заказа
+    const now = () => new Date().toISOString(); // ! получение текущей даты
 
     try {
-        await run("BEGIN TRANSACTION");
-        const orderNumber = await generateNextOrderNumber(createdAt);
+        await run("BEGIN TRANSACTION"); // ! начало транзакции
+        const orderNumber = await generateNextOrderNumber(createdAt); // ! получение следующего номера заказа
 
-        await run(
-            `INSERT INTO orders
-             (id, order_number, name, status, total_price, created_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [orderId, orderNumber, normalizedName, "pending", totalPrice, createdAt]
+        await run( // ! добавление заказа в базу данных
+            `INSERT INTO orders (id, order_number, status, total_price, created_at) VALUES (?, ?, ?, ?, ?)`,
+            [orderId, orderNumber, "pending", totalPrice, createdAt]
         );
 
-        for (const item of normalizedCart) {
-            const menuId = item.id;
-            const itemVolume = item.volume;
+        for (const item of normalizedCart) { // ! добавление товаров в заказ
+            const menuId = item.id; // ! получение ID товара
+            const itemVolume = item.volume; // ! получение объема товара
 
-            await run(
+            await run( // ! добавление товара в заказ
                 "INSERT INTO order_items (order_id, menu_id, name_snapshot, price_snapshot, volume) VALUES (?, ?, ?, ?, ?)",
                 [
                     orderId,
@@ -352,9 +345,9 @@ async function createOrder(name, cart) {
                 ]
             );
 
-            if (!menuId) continue;
+            if (!menuId) continue; // ! если товар не найден
 
-            const recipeRows = await all(
+            const recipeRows = await all( // ! получение строк рецептов
                 `SELECT mi.inventory_item_id, mi.qty_per_unit, s.quantity
                  FROM menu_ingredients mi
                  JOIN inventory_stock s ON s.item_id = mi.inventory_item_id
@@ -375,19 +368,19 @@ async function createOrder(name, cart) {
                 [menuId, itemVolume, itemVolume]
             );
 
-            for (const recipeRow of recipeRows) {
-                const requiredQty = Number(recipeRow.qty_per_unit);
-                const currentQty = Number(recipeRow.quantity || 0);
+            for (const recipeRow of recipeRows) { // ! добавление рецептов в заказ
+                const requiredQty = Number(recipeRow.qty_per_unit); // ! получение необходимого количества ингредиента
+                const currentQty = Number(recipeRow.quantity || 0); // ! получение текущего количества ингредиента
 
-                if (currentQty < requiredQty) {
+                if (currentQty < requiredQty) { // ! если текущее количество ингредиента меньше необходимого
                     throw makeOrderServiceError(
-                        `Недостаточно ингредиентов для «${item.name}»`,
+                        `Недостаточно ингредиентов для «${item.name}»`, // ! отправка ошибки если недостаточно ингредиентов
                         400,
-                        "ORDER_STOCK_SHORTAGE"
+                        "ORDER_STOCK_SHORTAGE" // ! код ошибки
                     );
                 }
 
-                await run(
+                await run( // ! обновление количества ингредиента в базе данных
                     "UPDATE inventory_stock SET quantity = quantity - ?, updated_at = ? WHERE item_id = ?",
                     [requiredQty, now(), recipeRow.inventory_item_id]
                 );
@@ -401,117 +394,117 @@ async function createOrder(name, cart) {
             }
         }
 
-        await run("COMMIT");
-        return getOrderById(orderId);
+        await run("COMMIT"); // ! завершение транзакции
+        return getOrderById(orderId); // ! возвращение заказа
     } catch (error) {
-        await run("ROLLBACK");
+        await run("ROLLBACK"); // ! откат транзакции
         throw error;
     }
 }
 
-async function updateOrderStatus(id, status) {
+async function updateOrderStatus(id, status) { // ! функция обновления статуса заказа
     await initializeDatabase();
-    const normalizedStatus = String(status || "").trim().toLowerCase();
-    const validStatuses = new Set(Object.values(ORDER_STATUSES));
-    if (!validStatuses.has(normalizedStatus)) {
+    const normalizedStatus = String(status || "").trim().toLowerCase(); // ! получение нормализованного статуса заказа
+    const validStatuses = new Set(Object.values(ORDER_STATUSES)); // ! получение списка допустимых статусов заказов
+    if (!validStatuses.has(normalizedStatus)) { // ! если статус заказа не в списке допустимых статусов
         throw makeOrderServiceError(
-            "Invalid status. Allowed: pending, ready, paid, closed",
+            "Invalid status. Allowed: pending, ready, paid, closed", // ! отправка ошибки если статус заказа не в списке допустимых статусов
             400,
             "ORDER_INVALID_STATUS"
         );
     }
 
-    const order = await getOrderLifecycleState(id);
-    if (!isStatusTransitionAllowed(order.status, normalizedStatus)) {
+    const order = await getOrderLifecycleState(id); // ! получение состояния заказа
+    if (!isStatusTransitionAllowed(order.status, normalizedStatus)) { // ! если переход статуса заказа не допустим
         throw makeOrderServiceError(
-            `Invalid status transition: ${order.status} -> ${normalizedStatus}`,
+            `Invalid status transition: ${order.status} -> ${normalizedStatus}`, // ! отправка ошибки если переход статуса заказа не допустим
             400,
-            "ORDER_INVALID_STATUS_TRANSITION"
+            "ORDER_INVALID_STATUS_TRANSITION" // ! код ошибки
         );
     }
 
-    await run("UPDATE orders SET status = ? WHERE id = ?", [normalizedStatus, String(id)]);
-    return getOrderById(id);
+    await run("UPDATE orders SET status = ? WHERE id = ?", [normalizedStatus, String(id)]); // ! обновление статуса заказа в базе данных
+    return getOrderById(id); // ! возвращение заказа
 }
 
-async function payOrder(id, paymentMethod) {
+async function payOrder(id, paymentMethod) { // ! функция оплаты заказа
     await initializeDatabase();
-    const allowedMethods = new Set(["cash", "card", "other"]);
+    const allowedMethods = new Set(["cash", "card", "other"]); // ! получение списка допустимых методов оплаты
     const normalizedMethod = String(paymentMethod || "").trim().toLowerCase();
-    if (!normalizedMethod) {
-        throw makeOrderServiceError("paymentMethod is required", 400, "ORDER_PAYMENT_METHOD_REQUIRED");
+    if (!normalizedMethod) { // ! если метод оплаты не валиден
+        throw makeOrderServiceError("paymentMethod is required", 400, "ORDER_PAYMENT_METHOD_REQUIRED"); // ! отправка ошибки если метод оплаты не валиден       
     }
-    if (!allowedMethods.has(normalizedMethod)) {
+    if (!allowedMethods.has(normalizedMethod)) { // ! если метод оплаты не в списке допустимых методов оплаты
         throw makeOrderServiceError(
-            "paymentMethod must be one of: cash, card, other",
+            "paymentMethod must be one of: cash, card, other", // ! отправка ошибки если метод оплаты не в списке допустимых методов оплаты
             400,
             "ORDER_INVALID_PAYMENT_METHOD"
         );
     }
 
-    const order = await getOrderLifecycleState(id);
-    if (order.status === ORDER_STATUSES.CLOSED) {
+    const order = await getOrderLifecycleState(id); // ! получение состояния заказа
+    if (order.status === ORDER_STATUSES.CLOSED) { // ! если заказ уже закрыт
         throw makeOrderServiceError("Order is already closed", 409, "ORDER_ALREADY_CLOSED");
     }
-    if (order.status === ORDER_STATUSES.PAID) {
+    if (order.status === ORDER_STATUSES.PAID) { // ! если заказ уже оплачен
         throw makeOrderServiceError("Order is already paid", 409, "ORDER_ALREADY_PAID");
     }
-    if (order.status !== ORDER_STATUSES.READY) {
+    if (order.status !== ORDER_STATUSES.READY) { // ! если заказ не готов к оплате
         throw makeOrderServiceError("Only ready orders can be paid", 400, "ORDER_INVALID_PAYMENT_STATUS");
     }
 
-    await run(
+    await run( // ! обновление статуса заказа в базе данных
         `UPDATE orders
          SET payment_method = ?, paid_at = ?, status = ?
          WHERE id = ?`,
         [normalizedMethod, new Date().toISOString(), ORDER_STATUSES.PAID, String(id)]
     );
-    return getOrderById(id);
+    return getOrderById(id); // ! возвращение заказа
 }
 
-async function closeOrderWithEmployeeCode(id, employeeCode) {
+async function closeOrderWithEmployeeCode(id, employeeCode) { // ! функция закрытия заказа с кодом сотрудника
     await initializeDatabase();
-    const normalizedCode = String(employeeCode || "").trim();
-    if (!normalizedCode) {
+    const normalizedCode = String(employeeCode || "").trim(); // ! получение нормализованного кода сотрудника
+    if (!normalizedCode) { // ! если код сотрудника не валиден
         throw makeOrderServiceError("employeeCode is required", 400, "ORDER_EMPLOYEE_CODE_REQUIRED");
     }
-    if (normalizedCode.length < 3 || normalizedCode.length > 32) {
+    if (normalizedCode.length < 3 || normalizedCode.length > 32) { // ! если код сотрудника не валиден
         throw makeOrderServiceError(
-            "employeeCode length must be from 3 to 32 characters",
+            "employeeCode length must be from 3 to 32 characters", // ! отправка ошибки если код сотрудника не валиден
             400,
             "ORDER_EMPLOYEE_CODE_LENGTH"
         );
     }
-    if (!/^[A-Za-z0-9_-]+$/.test(normalizedCode)) {
+    if (!/^[A-Za-z0-9_-]+$/.test(normalizedCode)) { // ! если код сотрудника не валиден
         throw makeOrderServiceError(
-            "employeeCode has invalid characters",
+            "employeeCode has invalid characters", // ! отправка ошибки если код сотрудника не валиден
             400,
             "ORDER_EMPLOYEE_CODE_FORMAT"
         );
     }
 
-    const order = await getOrderLifecycleState(id);
-    if (order.status === ORDER_STATUSES.CLOSED) {
+    const order = await getOrderLifecycleState(id); // ! получение состояния заказа
+    if (order.status === ORDER_STATUSES.CLOSED) { // ! если заказ уже закрыт
         throw makeOrderServiceError("Order is already closed", 409, "ORDER_ALREADY_CLOSED");
     }
-    if (order.status !== ORDER_STATUSES.PAID) {
+    if (order.status !== ORDER_STATUSES.PAID) { // ! если заказ не оплачен
         throw makeOrderServiceError("Only paid orders can be closed", 400, "ORDER_INVALID_CLOSE_STATUS");
     }
 
-    const employee = await get(
+    const employee = await get( // ! получение сотрудника
         `SELECT id, full_name, status, position
          FROM employees
          WHERE personal_code = ?`,
         [normalizedCode]
     );
-    if (!employee) {
+    if (!employee) { // ! если сотрудник не найден  
         throw makeOrderServiceError("Employee code is invalid", 404, "ORDER_EMPLOYEE_CODE_INVALID");
     }
-    if (employee.status !== "active") {
+    if (employee.status !== "active") { // ! если сотрудник не активен
         throw makeOrderServiceError("Employee is not active", 403, "ORDER_EMPLOYEE_INACTIVE");
     }
-    const allowedCloserPositions = new Set(["barista", "manager", "бариста", "менеджер"]);
-    if (!allowedCloserPositions.has(String(employee.position || "").trim().toLowerCase())) {
+    const allowedCloserPositions = new Set(["barista", "manager", "бариста", "менеджер"]); // ! получение списка допустимых позиций сотрудников
+    if (!allowedCloserPositions.has(String(employee.position || "").trim().toLowerCase())) { // ! если позиция сотрудника не в списке допустимых позиций сотрудников
         throw makeOrderServiceError(
             "Employee position is not allowed to close orders",
             403,
@@ -519,13 +512,13 @@ async function closeOrderWithEmployeeCode(id, employeeCode) {
         );
     }
 
-    await run(
+    await run( // ! обновление статуса заказа в базе данных
         `UPDATE orders
          SET closed_by_employee_id = ?, closed_at = ?, status = ?
          WHERE id = ?`,
         [employee.id, new Date().toISOString(), ORDER_STATUSES.CLOSED, String(id)]
     );
-    return getOrderById(id);
+    return getOrderById(id); // ! возвращение заказа
 }
 
 module.exports = {

@@ -1,18 +1,18 @@
 import { useState } from "react";
 
-function AdminUnlockModal({ isOpen, errorText = "", onClose, onSubmit }) {
-  const [keyValue, setKeyValue] = useState("");
+function AdminUnlockModal({ isOpen, errorText = "", onClose, onSubmit }) { // ! модалка ввода ключа админа
+  const [keyValue, setKeyValue] = useState(""); // ! введённый ключ
 
   if (!isOpen) {
     return null;
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = (event) => { // ! отправка ключа
     event.preventDefault();
     onSubmit?.(keyValue.trim());
   };
 
-  const handleClose = () => {
+  const handleClose = () => { // ! закрытие модалки
     setKeyValue("");
     onClose?.();
   };

@@ -213,13 +213,12 @@ async function seedDemoOrders(run, get, menuByName) {
 
     await run(
       `INSERT INTO orders
-       (id, order_number, name, status, total_price, payment_method, paid_at,
+       (id, order_number, status, total_price, payment_method, paid_at,
         closed_by_employee_id, closed_at, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         demo.id,
         orderNumber,
-        "",
         demo.status,
         totalPrice,
         demo.paymentMethod ?? null,
